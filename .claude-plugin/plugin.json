@@ -1,0 +1,10 @@
+{
+  "name": "clawd-quest",
+  "displayName": "Clawd Quest",
+  "version": "0.1.0",
+  "description": "An endless roguelike platformer starring Clawd, played in a pane while Claude works",
+  "author": { "name": "sangularvilue", "url": "https://github.com/sangularvilue" },
+  "homepage": "https://github.com/sangularvilue/clawd",
+  "repository": "https://github.com/sangularvilue/clawd",
+  "keywords": ["game", "platformer", "roguelike", "mod"]
+}

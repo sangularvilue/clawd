@@ -1,0 +1,6 @@
+{
+  "name": "clawd",
+  "description": "Clawd Quest: a roguelike platformer while Claude works",
+  "owner": { "name": "sangularvilue" },
+  "plugins": [{ "name": "clawd-quest", "source": "./" }]
+}

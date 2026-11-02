@@ -85,7 +85,7 @@ SEQ = [
     # +32  Lincoln
     AI('lincoln_chopper', 'chopper', 4, fx=dict(every=2, punch=0.05)),
     # +36
-    C('top_gun', 'TOP GUN', 'carrier launch, afterburner at sunset', 2),
+    C('top_gun', 'TOP GUN', 'carrier launch, afterburner at sunset', 2, **{'in': 1.4}),
     C('rudy', 'RUDY', 'carried off the field', 2),
     # +40  half-beat strobe
     *strobe(C('nd_sign', 'NOTRE DAME', 'sign slap', 1, **{'in': 0.25}),
@@ -94,7 +94,7 @@ SEQ = [
             C('boom', 'EXPLOSION', 'huge fireball', 1, fallback='boom'),
             C('rocky_punch_2', 'ROCKY IV', 'punch', 1),
             C('flag_2', 'FLAG', 'giant flag, second shot', 1, fallback='flag'),
-            C('shuttle', 'SHUTTLE', 'launch', 1),
+            C('top_gun_2', 'TOP GUN', 'Maverick canyon run', 1),
             C('boom_2', 'EXPLOSION', 'second fireball', 1, fallback='boom')),
     # +44
     C('eagle', 'BALD EAGLE', 'talons out, slow-mo', 2, speed=0.85, crop=(0.3, 0.02, 0.6, 0.6), **{'in': 1.75}),

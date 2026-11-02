@@ -74,7 +74,7 @@ SEQ = [
     C('starship', 'STARSHIP', 'booster caught by the chopsticks', 2),
     # +16  KEY CHANGE: Washington
     AI('washington_trex', 'trex', 2, speed=2.2, crop=(0.05, 0.03, 0.84, 0.84), fx=dict(punch=0.09, drift=0.10, shake=14, chroma=9)),
-    C('catch', 'ONE-HANDED CATCH', 'receiver fully airborne', 2),
+    C('catch', 'ONE-HANDED CATCH', 'Odell Beckham Jr. vs. Dallas, 2014', 2, **{'in': 0.3}),
     # +20
     C('b2', 'B-2', 'flyover, official footage', 1),
     C('bodybuilder_2', 'BODYBUILDER', 'second posing/lifting shot', 1),

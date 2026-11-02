@@ -16,15 +16,19 @@ SONG_START = 142.646
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def C(key, label, desc, beats, **kw):
+def C(key, label, desc, beats, fallback=None, **kw):
+    """Footage from media/<key>.*; until it exists, the drawn `fallback` shot or a labeled card."""
     for ext, kind in (('.mp4', 'clip'), ('.mov', 'clip'), ('.webm', 'clip'), ('.jpg', 'photo'), ('.png', 'photo')):
         path = os.path.join(HERE, 'media', key + ext)
         if os.path.exists(path):
             kw.pop('photo', None)
+            kw.pop('p', None)
             return dict({kind: path}, beats=beats, **kw)
     kind = 'photo' if kw.pop('photo', False) else 'clip'
-    for k in ('zoom', 'center', 'speed', 'in', 'fit'):
+    for k in ('zoom', 'center', 'speed', 'in', 'fit', 'dim'):
         kw.pop(k, None)
+    if fallback:
+        return dict(shot=fallback, beats=beats, **kw)
     return dict(shot='slot', beats=beats, p=dict(label=label, desc=desc, kind=kind), **kw)
 
 
@@ -52,15 +56,6 @@ def strobe(*items):
     return out
 
 
-USA = [(0, 'USA', 260, 0.5)]
-TERM = [
-    '$ torchrun train.py',
-    '  nodes 4096   gpus 32768',
-    'step 412000  loss 1.2843',
-    'step 412100  loss 1.2831',
-    'step 412200  loss 1.2817',
-]
-
 SEQ = [
     # +0  the slam back in after the breakdown: 2-beat holds
     C('rocky_summit', 'ROCKY IV', 'summit in the snow, arms up', 2, speed=0.6),
@@ -74,44 +69,50 @@ SEQ = [
     C('ice', 'ICE', 'agents moving in, official footage', 1),
     C('drone', 'DRONE STRIKE', 'thermal footage, official release', 1),
     C('starship', 'STARSHIP', 'booster caught by the chopsticks', 2),
-    # +16  KEY CHANGE: the presidents arrive
+    # +16  KEY CHANGE: Washington
     AI('washington_trex', 'trex', 4, fx=dict(every=2, punch=0.06)),
-    AI('lincoln_chopper', 'chopper', 4, fx=dict(every=2, punch=0.05)),
-    # +24  the AI lab, then the extractions
-    G('datacenter', 2, fx=dict(punch=0.04, chroma=8)),
-    G('terminal', 2, p=dict(lines=TERM, size=0.075, y=0.2), fx=dict(punch=0.02, shake=4, flash=0.3)),
+    # +20
+    C('b2', 'B-2', 'flyover, official footage', 2),
+    C('touchdown_jesus', 'NOTRE DAME', 'Touchdown Jesus', 2),
+    # +24  frontier AI compute, then the extractions
+    C('datacenter', 'AI LAB', 'server aisle / data center campus', 2, fallback='datacenter'),
+    C('datacenter_2', 'AI LAB', 'GPU racks close-up', 2, fallback='datacenter'),
     C('maduro', 'MADURO', 'capture photo, official release', 2, photo=True, fit='contain', zoom=(1.0, 1.12),
       center=(0.5, 0.0)),
     C('saddam', 'SADDAM', 'spider-hole briefing diagram', 2, photo=True, fit='contain', zoom=(1.0, 1.1),
       center=(0.5, 0.5)),
-    # +32
-    AI('reagan_samurai', 'duel', 4, fx=dict(punch=0.05), text=[(1, 'WIN ONE FOR THE GIPPER', 80, 0.88)]),
-    C('game', 'VIDEO GAME', 'Senator Armstrong, Metal Gear Rising', 2,
-      text=[(0.5, 'NANOMACHINES, SON.', 84, 0.86)]),
-    C('rudy', 'RUDY', 'carried off the field', 2, text=[(0.3, 'RUDY! RUDY! RUDY!', 84, 0.86)]),
+    # +32  Lincoln
+    AI('lincoln_chopper', 'chopper', 4, fx=dict(every=2, punch=0.05)),
+    # +36
+    C('game', 'VIDEO GAME', 'Senator Armstrong, Metal Gear Rising', 2),
+    C('rudy', 'RUDY', 'carried off the field', 2),
     # +40  half-beat strobe
-    *strobe(C('nd_sign', 'NOTRE DAME', 'sign slap', 1, **{'in': 0.25}), G('flag', 1, text=USA),
-            C('drone_2', 'DRONE STRIKE', 'impact', 1), G('boom', 1, text=USA),
-            C('rocky_punch_2', 'ROCKY IV', 'punch', 1), G('flag', 1, p=dict(t0=2), text=USA),
-            C('shuttle', 'SHUTTLE', 'launch', 1), G('boom', 1, p=dict(booms=[(0.3, 0.6, 260, 0), (0.75, 0.5, 300, 0.05)]))),
+    *strobe(C('nd_sign', 'NOTRE DAME', 'sign slap', 1, **{'in': 0.25}),
+            C('flag', 'FLAG', 'giant flag', 1, fallback='flag'),
+            C('drone_2', 'DRONE STRIKE', 'impact', 1),
+            C('boom', 'EXPLOSION', 'huge fireball', 1, fallback='boom'),
+            C('rocky_punch_2', 'ROCKY IV', 'punch', 1),
+            C('flag_2', 'FLAG', 'giant flag, second shot', 1, fallback='flag'),
+            C('shuttle', 'SHUTTLE', 'launch', 1),
+            C('boom_2', 'EXPLOSION', 'second fireball', 1, fallback='boom')),
     # +44
     C('eagle', 'BALD EAGLE', 'talons out, slow-mo', 2, speed=0.5),
     C('creed', 'ROCKY IV', "Apollo's Living in America entrance", 2),
-    C('b2', 'B-2', 'flyover, official footage', 2),
-    C('touchdown_jesus', 'NOTRE DAME', 'Touchdown Jesus', 2),
+    C('iss', 'ISS', 'the station over Earth', 2),
     C('rocky_steps', 'ROCKY', 'top of the steps, arms raised', 2),
-    C('shuttle_2', 'SHUTTLE', 'liftoff, wide', 2),
+    # +52  Reagan
+    AI('reagan_samurai', 'duel', 4, fx=dict(punch=0.05)),
     # +56  one cut per beat, then two-beat holds
     C('ice_2', 'ICE', 'second angle', 1),
     C('blue_angels', 'BLUE ANGELS', 'diamond formation', 1),
     C('drago', 'ROCKY IV', 'Drago goes down', 1),
     C('nd_band', 'NOTRE DAME', 'band hits the Victory March', 1),
     C('t1000', 'T-1000', 'walks out of the fire', 2),
-    C('fireworks', 'FIREWORKS', 'finale barrage', 2),
+    C('shuttle_2', 'SHUTTLE', 'liftoff, wide', 2),
     # +64
-    C('rocky_flag', 'ROCKY IV', 'wrapped in the flag', 3,
-      text=[(0, 'YO ADRIAN', 110, 0.86), (1.5, 'WE DID IT', 120, 0.86)]),
-    # +67  "NO BRAKES." lands on the song's last hit (+71), then rings out
-    G('endcard', 7, stack=True, fx=dict(every=4, punch=0.05),
+    C('rocky_flag', 'ROCKY IV', 'wrapped in the flag', 3),
+    # +67  end card over the fireworks; "NO BRAKES." lands on the song's last hit (+71), then rings out
+    C('fireworks', 'FIREWORKS', 'finale barrage', 7, fallback='endcard', dim=0.3, stack=True,
+      fx=dict(every=4, punch=0.05),
       text=[(0, '250 YEARS.', 150, 0.38), (4, 'NO BRAKES.', 150, 0.62)]),
 ]

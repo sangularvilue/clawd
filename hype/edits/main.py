@@ -113,7 +113,7 @@ SEQ = [
     # +64
     C('rocky_flag', 'ROCKY IV', 'wrapped in the flag', 3),
     # +67  end card over the fireworks; "NO BRAKES." lands on the song's last hit (+71), then rings out
-    C('fireworks', 'FIREWORKS', 'finale barrage', 7, fallback='endcard', dim=0.3, stack=True,
+    C('fireworks', 'FIREWORKS', 'finale barrage', 7, fallback='endcard', dim=0.1, stack=True,
       fx=dict(every=4, punch=0.05),
       text=[(0, '250 YEARS.', 150, 0.38), (4, 'NO BRAKES.', 150, 0.62)]),
 ]

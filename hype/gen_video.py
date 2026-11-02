@@ -35,6 +35,10 @@ PROMPTS = {
         'riding a chrome chopper motorcycle with tall ape-hanger handlebars down a desert highway at golden hour. '
         'An American flag streams from the back of the bike, his coat tails flap, sparks fly off the exhaust and '
         'explosions erupt on the horizon behind him. ' + STYLE),
+    'reagan_samurai': (
+        'Ronald Reagan in a dark suit and a white cowboy hat sword-fights a samurai in full lacquered armor on a misty '
+        'mountaintop at sunset, katanas clashing in a shower of sparks, a giant red sun behind them, cherry blossom '
+        'petals swirling, an American flag planted in the rock beside them. ' + STYLE),
     # optional extras
     'washington_jetski': (
         'George Washington stands heroically on a roaring jet ski, one boot forward, crossing the icy Delaware River '
@@ -119,7 +123,7 @@ def generate(model, key, prompt):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--keys', nargs='+', default=['washington_trex', 'lincoln_chopper'], choices=list(PROMPTS))
+    ap.add_argument('--keys', nargs='+', default=['washington_trex', 'lincoln_chopper', 'reagan_samurai'], choices=list(PROMPTS))
     ap.add_argument('--model', help='try this model first')
     ap.add_argument('--force', action='store_true', help='regenerate even if the clip exists')
     a = ap.parse_args()

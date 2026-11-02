@@ -383,6 +383,109 @@ def flyover(ts, dur, W, H, p):
     return f
 
 
+# ---------------------------------------------------------------- Reagan vs. a samurai
+
+def duel(ts, dur, W, H, p):
+    beat = p.get('_beat', 0.43)
+    y = np.linspace(0, 1, H)[:, None, None]
+    f = np.broadcast_to(np.array([70, 0, 20]) + (np.array([255, 120, 90]) - np.array([70, 0, 20])) * y ** 1.3,
+                        (H, W, 3)).astype(np.float32).copy()
+    cx, cy = W / 2, H * 0.44
+    ang, dist = fx._polar(W, H, int(cx), int(cy))
+    R = H * 0.33
+    f += np.exp(-dist / (R * 1.6))[..., None] * np.array([255, 90, 40], np.float32) * 0.5
+    disc = np.clip((R - dist) / 2.0, 0, 1)[..., None]
+    f = f * (1 - disc) + disc * np.array([235, 30, 35], np.float32)
+    for k, (yy, amp, col, sp) in enumerate([(0.74, 0.16, (150, 40, 60), 8), (0.82, 0.12, (100, 20, 40), 20)]):
+        ridge, _ = _mountains(W, H, yy * H, 30 + k, amp * H, col)
+        off = int(ts * sp) % W
+        m = (np.arange(H)[:, None] > ridge[off:off + W][None, :]).astype(np.float32)[..., None]
+        f = f * (1 - m) + m * (np.array(col, np.float32) * 0.6 + f * 0.4)
+    fog = np.exp(-((y - 0.8) / 0.08) ** 2) * 0.35
+    f = f * (1 - fog) + fog * np.array([255, 190, 190], np.float32)
+
+    sc = 0.95 * H / 720
+    phase = (ts % beat) / beat
+    push = 10 * math.sin(phase * math.pi)
+    S = fx.Sil(W, H, cx, H * 0.93, sc)
+    rk = [(-520, 0), (-420, -40), (-330, -30), (-200, -55), (-60, -45), (80, -60), (230, -50), (360, -35),
+          (470, -55), (560, -20), (800, 0), (800, 200), (-800, 200), (-800, 0)]
+    S.poly(rk)
+    C = (0, -372)
+
+    def blade(hands, tipdir):
+        dx, dy = C[0] - hands[0], C[1] - hands[1]
+        L = math.hypot(dx, dy)
+        ux, uy = dx / L, dy / L
+        tip = (hands[0] + ux * 215, hands[1] + uy * 215 - 12 * tipdir)
+        mid = (hands[0] + ux * 110, hands[1] + uy * 110 - 4)
+        S.line([hands, mid, tip], 5)
+        S.line([(hands[0] - ux * 30, hands[1] - uy * 30), hands], 9)
+        S.line([(hands[0] + uy * 14, hands[1] - ux * 14), (hands[0] - uy * 14, hands[1] + ux * 14)], 6)
+
+    # Reagan: cowboy hat, suit, lunging in from the left
+    o = -push
+    S.line([(-175 + o, -150), (-112 + o, -82), (-92 + o, 0)], 27)
+    S.line([(-182 + o, -150), (-240 + o, -76), (-282 + o, 0)], 27)
+    S.poly([(-204 + o, -176), (-142 + o, -176), (-130 + o, -136), (-214 + o, -136)])
+    S.line([(-176 + o, -150), (-160 + o, -265)], 58)
+    S.circle((-152 + o, -293), 20)
+    S.poly([(-214 + o, -296), (-196 + o, -309), (-150 + o, -313), (-106 + o, -309), (-88 + o, -297),
+            (-104 + o, -302), (-150 + o, -305), (-198 + o, -302)])
+    S.poly([(-174 + o, -310), (-171 + o, -338), (-153 + o, -333), (-135 + o, -338), (-131 + o, -310)])
+    hands_r = (-110 + o, -318)
+    S.line([(-162 + o, -255), (-140 + o, -292), hands_r], 17)
+    blade(hands_r, 1)
+    # the samurai: kabuto with crescent horns, shoulder plates, armored skirt
+    o = push
+    S.line([(170 + o, -150), (116 + o, -80), (96 + o, 0)], 29)
+    S.line([(180 + o, -150), (246 + o, -76), (288 + o, 0)], 29)
+    S.poly([(134 + o, -178), (214 + o, -178), (238 + o, -116), (112 + o, -116)])
+    S.line([(176 + o, -160), (166 + o, -262)], 66)
+    S.poly([(128 + o, -268), (160 + o, -268), (150 + o, -214), (120 + o, -220)])
+    S.poly([(190 + o, -266), (224 + o, -262), (232 + o, -208), (198 + o, -212)])
+    S.circle((168 + o, -292), 20)
+    S.poly([(146 + o, -296), (150 + o, -318), (168 + o, -326), (188 + o, -318), (194 + o, -296)])
+    S.poly([(140 + o, -298), (198 + o, -298), (214 + o, -272), (128 + o, -274)])
+    S.line([(160 + o, -318), (140 + o, -346), (146 + o, -366)], 6)
+    S.line([(170 + o, -320), (188 + o, -350), (180 + o, -370)], 6)
+    hands_s = (112 + o, -318)
+    S.line([(165 + o, -252), (142 + o, -288), hands_s], 17)
+    blade(hands_s, -1)
+    S.line([(470, -40), (462, -330)], 6)
+    m = S.mask()
+    fx.comp_sil(f, m, color=(10, 4, 8), rim=(255, 150, 120), light=(0, -1), rim_px=3, rim_k=0.8)
+    fl = fx.wave_flag(int(96 * sc), ts, pole='left', speed=9)
+    px, py = S.p(462, -330)
+    fx.paste(f, fl, int(px / S.ss), int(py / S.ss - 4))
+
+    # sparks on every clash (each beat)
+    k0 = int(ts // beat)
+    spx, spy = S.p(*C)
+    spx, spy = spx / S.ss, spy / S.ss
+    lay = Image.new('RGB', (W, H), (0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    for k in range(max(0, k0 - 1), k0 + 1):
+        age = ts - k * beat
+        if age < 0:
+            continue
+        rng = np.random.default_rng(100 + k)
+        for i in range(70):
+            a = rng.uniform(0, TAU)
+            v = rng.uniform(250, 900) * sc
+            x = spx + math.cos(a) * v * age
+            yv = spy + math.sin(a) * v * age + 900 * sc * age * age
+            al = max(0.0, 1 - age / 0.55)
+            c = (int(255 * al), int(220 * al), int(120 * al))
+            d.line([(x, yv), (x - math.cos(a) * v * 0.025, yv - math.sin(a) * v * 0.025)], fill=c, width=2)
+    f += np.asarray(lay, np.float32) * 1.4
+    flash = math.exp(-((ts % beat) / 0.06))
+    _glint(f, spx, spy, flash, 120 * sc)
+    fx.fire(f, spx, spy, 40 * sc, 5.0, seed=k0, strength=flash * 1.2)
+    fx.embers(f, ts, n=90, color=(255, 170, 200), vx=-140, vy=50, seed=21, size=3)
+    return f
+
+
 # ---------------------------------------------------------------- simple cards
 
 def flag(ts, dur, W, H, p):
@@ -425,5 +528,5 @@ def slot(ts, dur, W, H, p):
     return np.asarray(img, np.float32)
 
 
-SHOTS = dict(slot=slot, trex=trex, chopper=chopper, datacenter=datacenter, terminal=terminal, flyover=flyover,
+SHOTS = dict(slot=slot, duel=duel, trex=trex, chopper=chopper, datacenter=datacenter, terminal=terminal, flyover=flyover,
              flag=flag, boom=boom, endcard=endcard)

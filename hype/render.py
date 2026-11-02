@@ -79,6 +79,7 @@ def main():
     ap.add_argument('--bpm', type=float)
     ap.add_argument('--hd', action='store_true', help='1920x1080 60fps (default 1280x720 30fps draft)')
     ap.add_argument('--preview', action='store_true', help='640x360 30fps, fastest')
+    ap.add_argument('--placeholder', action='store_true', help='placeholder drums even if the edit names a song')
     ap.add_argument('--vertical', action='store_true', help='9:16')
     ap.add_argument('--out')
     ap.add_argument('--only', help='render a beat range a:b for quick looks')
@@ -88,6 +89,9 @@ def main():
     W, H, fps = (1920, 1080, 60) if a.hd else (640, 360, 30) if a.preview else (1280, 720, 30)
     if a.vertical:
         W, H = H, W
+    if not a.song and getattr(E, 'SONG', None) and not a.placeholder:
+        a.song = os.path.join(HERE, E.SONG)
+        a.start = getattr(E, 'SONG_START', 0.0)
     bpm = a.bpm or getattr(E, 'BPM', 160)
     beat = 60 / bpm
     seq = E.SEQ
@@ -128,7 +132,7 @@ def main():
         s = seq[k]
         ts = t - starts[k] * beat
         sdur = s['beats'] * beat
-        p = s.get('p', {})
+        p = dict(s.get('p', {}), _beat=beat)
         if k != src_i:
             if src is not None and hasattr(src, 'close'):
                 src.close()

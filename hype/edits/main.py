@@ -25,7 +25,7 @@ def C(key, label, desc, beats, fallback=None, **kw):
             kw.pop('p', None)
             return dict({kind: path}, beats=beats, **kw)
     kind = 'photo' if kw.pop('photo', False) else 'clip'
-    for k in ('zoom', 'center', 'speed', 'in', 'fit', 'dim'):
+    for k in ('zoom', 'center', 'speed', 'in', 'fit', 'dim', 'crop'):
         kw.pop(k, None)
     if fallback:
         return dict(shot=fallback, beats=beats, **kw)
@@ -97,7 +97,7 @@ SEQ = [
             C('shuttle', 'SHUTTLE', 'launch', 1),
             C('boom_2', 'EXPLOSION', 'second fireball', 1, fallback='boom')),
     # +44
-    C('eagle', 'BALD EAGLE', 'talons out, slow-mo', 2, speed=0.5),
+    C('eagle', 'BALD EAGLE', 'talons out, slow-mo', 2, speed=0.85, crop=(0.3, 0.02, 0.6, 0.6), **{'in': 1.75}),
     C('creed', 'ROCKY IV', "Apollo's Living in America entrance", 2),
     C('iss', 'ISS', 'the station over Earth', 2),
     C('rocky_steps', 'ROCKY', 'top of the steps, arms raised', 2),

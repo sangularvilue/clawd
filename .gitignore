@@ -4,3 +4,5 @@ hype/out/
 hype/media/
 __pycache__/
 hype/generated/
+hype/inspiration/*
+!hype/inspiration/NOTES.md

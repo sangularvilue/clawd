@@ -140,6 +140,29 @@ def main():
                if s.get('screech') is not None and b0 <= starts[i] < b1]
         audio.drums(bpm, dur, wav, braams=braams, screech=scr[0] if scr else None)
 
+    # sound bites: clips marked voice=True play their own audio over the song, which ducks underneath
+    voices = [(i, s) for i, s in enumerate(seq) if s.get('voice') and 'clip' in s and b0 <= starts[i] < b1]
+    if voices:
+        mixed = out + '.mix.wav'
+        cmd = ['ffmpeg', '-v', 'error', '-y', '-i', wav]
+        parts, duck = [], []
+        for j, (i, s) in enumerate(voices):
+            t0 = (starts[i] - b0) * beat
+            vlen = s['beats'] * beat + s.get('voice_tail', 0.0)
+            spd = s.get('speed', 1.0)
+            cmd += ['-ss', str(s.get('in', 0.0)), '-t', str(vlen * spd), '-i', os.path.join(HERE, s['clip'])]
+            tempo = 'atempo=%f,' % spd if abs(spd - 1) > 1e-3 and 0.5 <= spd <= 2 else ''
+            ms = int(t0 * 1000)
+            parts.append('[%d:a]%saresample=44100,aformat=channel_layouts=stereo,volume=%f,'
+                         'afade=t=out:st=%f:d=0.08,adelay=%d|%d[v%d]'
+                         % (j + 1, tempo, s.get('voice_gain', 1.6), max(0.0, vlen - 0.08), ms, ms, j))
+            duck.append('between(t,%f,%f)' % (t0 - 0.05, t0 + vlen + 0.05))
+        song = "[0:a]volume='if(%s,%f,1)':eval=frame[s]" % ('+'.join(duck), s.get('duck', 0.3))
+        mix = '[s]' + ''.join('[v%d]' % j for j in range(len(voices)))
+        fc = ';'.join([song] + parts) + ';' + mix + 'amix=inputs=%d:normalize=0:duration=first[out]' % (len(voices) + 1)
+        subprocess.run(cmd + ['-filter_complex', fc, '-map', '[out]', '-ar', '44100', '-ac', '2', mixed], check=True)
+        os.replace(mixed, wav)
+
     enc = subprocess.Popen(['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', '%dx%d' % (W, H),
                             '-r', str(fps), '-i', '-', '-i', wav, '-c:v', 'libx264', '-preset', 'medium', '-crf', '18',
                             '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '256k', '-shortest', '-movflags', '+faststart',

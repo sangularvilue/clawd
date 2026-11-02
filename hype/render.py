@@ -60,6 +60,9 @@ class Photo:
             x0, y0 = (bg.width - W) // 2, (bg.height - H) // 2
             bg = bg.crop((x0, y0, x0 + W, y0 + H)).filter(ImageFilter.GaussianBlur(H / 40))
             self.bg = np.asarray(bg, np.float32) * 0.45
+            k = int(H * 0.94 // im.height)
+            if k >= 2:  # tiny web graphics: whole-pixel upscale first so labels stay crisp
+                im = im.resize((im.width * k, im.height * k), Image.NEAREST)
             self.fg = im
             return
         sc = max(W * zm / im.width, H * zm / im.height)

@@ -78,13 +78,14 @@ def main():
     ap.add_argument('--start', type=float, default=0.0, help='song time of beat 0 (a downbeat)')
     ap.add_argument('--bpm', type=float)
     ap.add_argument('--hd', action='store_true', help='1920x1080 60fps (default 1280x720 30fps draft)')
+    ap.add_argument('--preview', action='store_true', help='640x360 30fps, fastest')
     ap.add_argument('--vertical', action='store_true', help='9:16')
     ap.add_argument('--out')
     ap.add_argument('--only', help='render a beat range a:b for quick looks')
     a = ap.parse_args()
 
     E = load_edit(a.edit)
-    W, H, fps = (1920, 1080, 60) if a.hd else (1280, 720, 30)
+    W, H, fps = (1920, 1080, 60) if a.hd else (640, 360, 30) if a.preview else (1280, 720, 30)
     if a.vertical:
         W, H = H, W
     bpm = a.bpm or getattr(E, 'BPM', 160)

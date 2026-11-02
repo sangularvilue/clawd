@@ -309,11 +309,11 @@ def terminal(ts, dur, W, H, p):
     lines = p.get('lines', TERM)
     img = Image.new('RGB', (W, H), (4, 10, 7))
     d = ImageDraw.Draw(img)
-    size = int(H * 0.056)
+    size = int(H * p.get('size', 0.056))
     fnt = fx.font(size, 'JetBrainsMono.ttf')
     total = sum(len(l) for l in lines)
     n = int(total * min(1.0, ts / (dur * 0.8)))
-    y = int(H * 0.1)
+    y = int(H * p.get('y', 0.1))
     for l in lines:
         s = l[:max(0, n)]
         n -= len(l)
@@ -407,5 +407,23 @@ def endcard(ts, dur, W, H, p):
     return f
 
 
-SHOTS = dict(trex=trex, chopper=chopper, datacenter=datacenter, terminal=terminal, flyover=flyover,
+def slot(ts, dur, W, H, p):
+    """Stand-in card for footage that hasn't been downloaded yet."""
+    ys, xs = np.mgrid[0:H, 0:W].astype(np.float32)
+    stripe = ((xs + ys + ts * 400) // (H * 0.08)) % 2
+    f = np.zeros((H, W, 3), np.float32) + np.array([18, 22, 40], np.float32)
+    f += stripe[..., None] * np.array([10, 10, 18], np.float32)
+    col = {'clip': (255, 200, 60), 'photo': (120, 220, 255)}.get(p.get('kind', 'clip'), (255, 200, 60))
+    fx.text(f, p.get('label', 'CLIP'), 0.15 * H, cy=0.42, style='plain')
+    fx.text(f, p.get('desc', ''), 0.055 * H, cy=0.62, style='mono', name='JetBrainsMono.ttf')
+    img = Image.fromarray(np.clip(f, 0, 255).astype(np.uint8))
+    d = ImageDraw.Draw(img)
+    tag = 'NEEDS ' + p.get('kind', 'clip').upper()
+    fnt = fx.font(0.04 * H, 'JetBrainsMono.ttf')
+    d.rectangle([0.04 * W, 0.06 * H, 0.04 * W + fnt.getlength(tag) + 0.03 * H, 0.13 * H], outline=col, width=3)
+    d.text((0.04 * W + 0.015 * H, 0.07 * H), tag, font=fnt, fill=col)
+    return np.asarray(img, np.float32)
+
+
+SHOTS = dict(slot=slot, trex=trex, chopper=chopper, datacenter=datacenter, terminal=terminal, flyover=flyover,
              flag=flag, boom=boom, endcard=endcard)

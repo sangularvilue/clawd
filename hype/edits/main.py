@@ -74,8 +74,7 @@ SEQ = [
     C('starship', 'STARSHIP', 'booster caught by the chopsticks', 2),
     # +16  KEY CHANGE: Washington
     AI('washington_trex', 'trex', 2, speed=2.2, crop=(0.05, 0.03, 0.84, 0.84), fx=dict(punch=0.09, drift=0.10, shake=14, chroma=9)),
-    C('starship_2', 'STARSHIP', 'Flight 7 liftoff from overhead', 1),
-    C('iss_2', 'ISS', 'spacewalk over Earth', 1),
+    C('catch', 'ONE-HANDED CATCH', 'receiver fully airborne', 2),
     # +20
     C('b2', 'B-2', 'flyover, official footage', 1),
     C('bodybuilder_2', 'BODYBUILDER', 'second posing/lifting shot', 1),

@@ -3,3 +3,4 @@ node_modules/
 hype/out/
 hype/media/
 __pycache__/
+hype/generated/

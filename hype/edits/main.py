@@ -63,7 +63,7 @@ TERM = [
 
 SEQ = [
     # +0  the slam back in after the breakdown: 2-beat holds
-    C('rocky_summit', 'ROCKY IV', 'summit in the snow, arms up', 2),
+    C('rocky_summit', 'ROCKY IV', 'summit in the snow, arms up', 2, speed=0.6),
     C('nd_tunnel', 'NOTRE DAME', 'team storms out of the tunnel', 2),
     C('saturn_v', 'SATURN V', 'ignition + liftoff', 2),
     C('moon_flag', 'APOLLO', 'planting the flag on the Moon', 2),

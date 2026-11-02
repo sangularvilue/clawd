@@ -2,3 +2,4 @@
 node_modules/
 hype/out/
 hype/media/
+__pycache__/

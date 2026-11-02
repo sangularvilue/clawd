@@ -84,7 +84,7 @@ SEQ = [
     # +24  the AI section
     G('datacenter', 2, fx=dict(punch=0.04, chroma=8), text=[(0.25, 'WE TAUGHT ROCKS\nTO THINK', 120, 0.5, 'usa')]),
     G('terminal', 3, p=dict(lines=TERM_SHORT, size=0.1, y=0.12), fx=dict(punch=0.02, shake=4, flash=0.3)),
-    C('maduro', 'MADURO', 'capture photo, official release', 2, photo=True, zoom=(1.0, 1.25),
+    C('maduro', 'MADURO', 'capture photo, official release', 2, photo=True, zoom=(1.0, 1.3), center=(0.33, 0.15),
       text=[(0.4, 'EXTRACTION: COMPLETE', 100, 0.86, 'usa')]),
     G('boom', 1),
     # +32

@@ -72,7 +72,8 @@ SEQ = [
     # +16  KEY CHANGE: Washington
     AI('washington_trex', 'trex', 4, fx=dict(every=2, punch=0.06)),
     # +20
-    C('b2', 'B-2', 'flyover, official footage', 2),
+    C('b2', 'B-2', 'flyover, official footage', 1),
+    C('bodybuilder_2', 'BODYBUILDER', 'second posing/lifting shot', 1),
     C('touchdown_jesus', 'NOTRE DAME', 'Touchdown Jesus', 2),
     # +24  frontier AI compute, then the extractions
     C('datacenter', 'AI LAB', 'server aisle / data center campus', 2, fallback='datacenter'),
@@ -84,7 +85,8 @@ SEQ = [
     # +32  Lincoln
     AI('lincoln_chopper', 'chopper', 4, fx=dict(every=2, punch=0.05)),
     # +36
-    C('game', 'VIDEO GAME', 'Senator Armstrong, Metal Gear Rising', 2),
+    C('game', 'VIDEO GAME', 'Senator Armstrong, Metal Gear Rising', 1),
+    C('bodybuilder', 'BODYBUILDER', 'Arnold flexing on stage', 1),
     C('rudy', 'RUDY', 'carried off the field', 2),
     # +40  half-beat strobe
     *strobe(C('nd_sign', 'NOTRE DAME', 'sign slap', 1, **{'in': 0.25}),
@@ -108,7 +110,7 @@ SEQ = [
     C('drago', 'ROCKY IV', 'Drago goes down', 1),
     C('nd_band', 'NOTRE DAME', 'band hits the Victory March', 1),
     C('t1000', 'T-1000', 'walks out of the fire', 2),
-    C('shuttle_2', 'SHUTTLE', 'liftoff, wide', 2),
+    C('rocky_beach', 'ROCKY III', 'Rocky and Apollo running on the beach', 2),
     # +64
     C('rocky_flag', 'ROCKY IV', 'wrapped in the flag', 3),
     # +67  end card over the fireworks; "NO BRAKES." lands on the song's last hit (+71), then rings out

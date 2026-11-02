@@ -1,0 +1,355 @@
+"""Shared building blocks: fire, waving flags, silhouettes, text slams, and the
+per-frame post chain (punch zoom, shake, chroma split, flash, grade, grain)."""
+import math
+import os
+from functools import lru_cache
+
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+FONTS = os.path.join(HERE, 'fonts')
+
+RED = (191, 10, 48)
+WHITE = (245, 245, 245)
+BLUE = (0, 40, 104)
+
+
+# ---------------------------------------------------------------- fonts / text
+
+@lru_cache(maxsize=64)
+def font(size, name='Anton.ttf'):
+    return ImageFont.truetype(os.path.join(FONTS, name), int(size))
+
+
+@lru_cache(maxsize=256)
+def _text_rgba(text, size, style, name):
+    f = font(size, name)
+    lines = text.split('\n')
+    boxes = [f.getbbox(l) for l in lines]
+    lh = int(size * 1.02)
+    w = max(b[2] - b[0] for b in boxes)
+    pad = int(size * 0.25)
+    off = max(4, int(size * 0.06))
+    img = Image.new('RGBA', (w + pad * 2 + off * 2, lh * len(lines) + pad * 2 + off * 2), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    stroke = max(3, int(size * 0.035))
+    for i, l in enumerate(lines):
+        b = boxes[i]
+        x = pad + (w - (b[2] - b[0])) // 2 - b[0]
+        y = pad + i * lh - b[1] + (lh - (b[3] - b[1])) // 2
+        if style == 'usa':
+            d.text((x + off * 2, y + off * 2), l, font=f, fill=BLUE + (255,), stroke_width=stroke, stroke_fill=(0, 0, 0, 255))
+            d.text((x + off, y + off), l, font=f, fill=RED + (255,), stroke_width=stroke, stroke_fill=(0, 0, 0, 255))
+            d.text((x, y), l, font=f, fill=(255, 255, 255, 255), stroke_width=stroke, stroke_fill=(0, 0, 0, 255))
+        elif style == 'gold':
+            d.text((x + off, y + off), l, font=f, fill=(0, 0, 0, 200))
+            d.text((x, y), l, font=f, fill=(255, 205, 60, 255), stroke_width=stroke, stroke_fill=(60, 20, 0, 255))
+        elif style == 'mono':
+            d.text((x, y), l, font=f, fill=(255, 255, 255, 255))
+        else:  # 'plain' white with black stroke
+            d.text((x, y), l, font=f, fill=(255, 255, 255, 255), stroke_width=stroke, stroke_fill=(0, 0, 0, 255))
+    return np.asarray(img).astype(np.float32)
+
+
+def text(frame, s, size, cx=0.5, cy=0.5, style='usa', slam_t=None, name='Anton.ttf', alpha=1.0):
+    """Composite text onto float frame. slam_t: seconds since the slam began
+    (text drops in from oversized and lands hard)."""
+    H, W = frame.shape[:2]
+    scale = 1.0
+    if slam_t is not None:
+        scale = 1.0 + 0.9 * math.exp(-max(0.0, slam_t) / 0.04)
+        scale = round(scale * 25) / 25
+    rgba = _text_rgba(s, int(size * scale), style, name)
+    paste(frame, rgba, int(cx * W - rgba.shape[1] / 2), int(cy * H - rgba.shape[0] / 2), alpha)
+
+
+def paste(frame, rgba, x, y, alpha=1.0):
+    H, W = frame.shape[:2]
+    h, w = rgba.shape[:2]
+    x0, y0, x1, y1 = max(0, x), max(0, y), min(W, x + w), min(H, y + h)
+    if x1 <= x0 or y1 <= y0:
+        return
+    src = rgba[y0 - y:y1 - y, x0 - x:x1 - x]
+    a = src[..., 3:4] / 255.0 * alpha
+    dst = frame[y0:y1, x0:x1]
+    dst *= 1 - a
+    dst += src[..., :3] * a
+
+
+# ---------------------------------------------------------------- noise / fire
+
+def _tile_noise(n=512, seed=0, octaves=(4, 8, 16, 32, 64, 128)):
+    rng = np.random.default_rng(seed)
+    out = np.zeros((n, n), np.float32)
+    amp, tot = 1.0, 0.0
+    for g in octaves:
+        r = rng.random((g, g)).astype(np.float32)
+        x = np.arange(n) * g / n
+        i0 = np.floor(x).astype(int)
+        f = (x - i0).astype(np.float32)
+        f = f * f * (3 - 2 * f)
+        i1 = (i0 + 1) % g
+        a, b = r[i0][:, i0], r[i0][:, i1]
+        c, d = r[i1][:, i0], r[i1][:, i1]
+        fx, fy = f[None, :], f[:, None]
+        out += amp * ((a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy)
+        tot += amp
+        amp *= 0.55
+    out /= tot
+    return (out - out.min()) / (out.max() - out.min())
+
+
+NOISE = _tile_noise()
+NN = NOISE.shape[0]
+
+
+def _lut(stops):
+    xs = np.linspace(0, 1, 256)
+    p = [s[0] for s in stops]
+    return np.stack([np.interp(xs, p, [s[1][c] for s in stops]) for c in range(3)], 1).astype(np.float32)
+
+
+FIRE = _lut([(0, (0, 0, 0)), (0.18, (50, 4, 0)), (0.38, (160, 28, 0)), (0.58, (240, 95, 10)),
+             (0.78, (255, 185, 55)), (1.0, (255, 250, 225))])
+
+
+def fire(frame, cx, cy, r, t, seed=0, rise=1.2, strength=1.0, squash=1.0, heat=1.45):
+    """Additive turbulent fireball. r in px; t seconds since it ignited."""
+    H, W = frame.shape[:2]
+    grow = 0.35 + 0.65 * (1 - math.exp(-t * 4))
+    r = r * grow
+    x0, x1 = max(0, int(cx - r * 1.4)), min(W, int(cx + r * 1.4))
+    y0, y1 = max(0, int(cy - r * 1.7)), min(H, int(cy + r * 1.2))
+    if x1 <= x0 or y1 <= y0 or r < 2:
+        return
+    ys, xs = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+    dx = (xs - cx) / r
+    dy = (ys - cy) / r
+    dy = np.where(dy < 0, dy * 0.72, dy * 1.25) * squash
+    u = (dx * 150 + seed * 131).astype(np.int32) % NN
+    v = (dy * 150 + t * rise * 150 + seed * 71).astype(np.int32) % NN
+    n = NOISE[v, u]
+    u2 = (dx * 330 + seed * 53 + 200).astype(np.int32) % NN
+    v2 = (dy * 330 + t * rise * 330).astype(np.int32) % NN
+    n = n * 0.65 + NOISE[v2, u2] * 0.35
+    d = np.sqrt(dx * dx + dy * dy)
+    fade = math.exp(-max(0.0, t - 0.6) * 0.6)
+    rx, ry = (xs - cx) / r, (ys - cy) / r
+    edge = (np.clip((rx + 1.4) / 0.35, 0, 1) * np.clip((1.4 - rx) / 0.35, 0, 1) *
+            np.clip((ry + 1.7) / 0.45, 0, 1) * np.clip((1.2 - ry) / 0.3, 0, 1))
+    val = np.clip((1.05 - d + (n - 0.5) * 1.5) * heat * fade, 0, 1) * edge
+    frame[y0:y1, x0:x1] += FIRE[(val * 255).astype(np.uint8)] * strength
+
+
+# ---------------------------------------------------------------- flags
+
+@lru_cache(maxsize=8)
+def flag_base(h):
+    """Official-proportion US flag, h px tall (w = 1.9h), float32 RGB."""
+    ss = 3
+    H, W = h * ss, int(h * 1.9) * ss
+    img = Image.new('RGB', (W, H), WHITE)
+    d = ImageDraw.Draw(img)
+    sh = H / 13
+    for i in range(0, 13, 2):
+        d.rectangle([0, i * sh, W, (i + 1) * sh], fill=RED)
+    cw, ch = W * 0.76 / 1.9, sh * 7
+    d.rectangle([0, 0, cw, ch], fill=(10, 49, 97))
+    R = H * 0.0616 / 2
+    for row in range(9):
+        y = (row + 1) * ch / 10
+        cols = [(2 * j + 1) * cw / 12 for j in range(6)] if row % 2 == 0 else [(2 * j + 2) * cw / 12 for j in range(5)]
+        for x in cols:
+            pts = []
+            for k in range(10):
+                a = -math.pi / 2 + k * math.pi / 5
+                rr = R if k % 2 == 0 else R * 0.382
+                pts.append((x + rr * math.cos(a), y + rr * math.sin(a)))
+            d.polygon(pts, fill=WHITE)
+    img = img.resize((W // ss, H // ss), Image.LANCZOS)
+    return np.asarray(img).astype(np.float32)
+
+
+def wave_flag(h, t, amp=None, waves=1.4, speed=7.0, pole='left', droop=0.0):
+    """Waving flag pinned at the pole side. Returns float RGBA (h+2amp, 1.9h)."""
+    base = flag_base(h)
+    fh, fw = base.shape[:2]
+    if amp is None:
+        amp = int(h * 0.12)
+    xs = np.arange(fw)
+    if pole == 'right':
+        base = base[:, ::-1]
+        d = (fw - 1 - xs) / fw
+    else:
+        d = xs / fw
+    phase = 2 * math.pi * waves * d - speed * t
+    dy = amp * np.sin(phase) * d ** 0.8 + droop * h * d ** 2
+    shade = 1 + 0.38 * np.cos(phase) * np.minimum(1, d * 4)
+    oh = fh + 2 * amp + int(abs(droop) * h) + 2
+    ys = np.arange(oh)[:, None] - amp - dy[None, :]
+    valid = ((ys >= 0) & (ys < fh - 1)).astype(np.float32)
+    src = base[np.clip(ys, 0, fh - 1).astype(int), xs[None, :]]
+    rgb = np.clip(src * shade[None, :, None], 0, 255)
+    return np.concatenate([rgb, valid[..., None] * 255], 2)
+
+
+def flag_fullscreen(W, H, t, dark=0.0):
+    h = int(H * 1.25)
+    base = flag_base(h)
+    fh, fw = base.shape[:2]
+    ys, xs = np.mgrid[0:H, 0:W].astype(np.float32)
+    ph = xs * 0.011 + ys * 0.004 - t * 5.0
+    sx = xs * (fw - 60) / W + 30 + np.sin(ph) * 14
+    sy = ys * (fh - 80) / H + 40 + np.sin(ph) * 22
+    out = base[np.clip(sy, 0, fh - 1).astype(int), np.clip(sx, 0, fw - 1).astype(int)]
+    shade = 1 + 0.32 * np.cos(ph)
+    return np.clip(out * shade[..., None] * (1 - dark), 0, 255)
+
+
+# ---------------------------------------------------------------- silhouettes
+
+class Sil:
+    """Draw a silhouette in local units, anti-aliased via supersampling."""
+
+    def __init__(self, W, H, ox, oy, sc, ss=2):
+        self.W, self.H, self.ss = W, H, ss
+        self.ox, self.oy, self.sc = ox, oy, sc
+        self.img = Image.new('L', (W * ss, H * ss), 0)
+        self.d = ImageDraw.Draw(self.img)
+
+    def p(self, x, y):
+        return ((self.ox + x * self.sc) * self.ss, (self.oy + y * self.sc) * self.ss)
+
+    def poly(self, pts, fill=255):
+        self.d.polygon([self.p(*q) for q in pts], fill=fill)
+
+    def line(self, pts, w, fill=255):
+        P = [self.p(*q) for q in pts]
+        ww = max(1, int(w * self.sc * self.ss))
+        self.d.line(P, fill=fill, width=ww, joint='curve')
+        for q in (P[0], P[-1]):
+            r = ww / 2
+            self.d.ellipse([q[0] - r, q[1] - r, q[0] + r, q[1] + r], fill=fill)
+
+    def circle(self, c, r, fill=255, outline_w=None):
+        x, y = self.p(*c)
+        rr = r * self.sc * self.ss
+        if outline_w:
+            self.d.ellipse([x - rr, y - rr, x + rr, y + rr], outline=fill, width=max(1, int(outline_w * self.sc * self.ss)))
+        else:
+            self.d.ellipse([x - rr, y - rr, x + rr, y + rr], fill=fill)
+
+    def mask(self):
+        return np.asarray(self.img.resize((self.W, self.H), Image.BILINEAR), np.float32) / 255.0
+
+
+def comp_sil(frame, m, color=(8, 6, 10), rim=(255, 170, 70), light=(-1, -1), rim_px=3, rim_k=1.0):
+    """Composite a silhouette mask with a rim light on edges facing `light`."""
+    lx, ly = light
+    sh = np.roll(m, (int(-ly * rim_px), int(-lx * rim_px)), axis=(0, 1))
+    r = np.clip(m - sh, 0, 1) * rim_k
+    frame *= (1 - m)[..., None]
+    frame += m[..., None] * np.array(color, np.float32)
+    frame += r[..., None] * np.array(rim, np.float32)
+
+
+# ---------------------------------------------------------------- backgrounds
+
+@lru_cache(maxsize=4)
+def _polar(W, H, cx, cy):
+    ys, xs = np.mgrid[0:H, 0:W].astype(np.float32)
+    return np.arctan2(ys - cy, xs - cx), np.sqrt((xs - cx) ** 2 + (ys - cy) ** 2)
+
+
+def sunset(W, H, t, sun=(0.5, 0.62), sun_r=0.16, top=(40, 0, 20), mid=(200, 40, 10), hor=(255, 170, 60), rays=True):
+    y = np.linspace(0, 1, H)[:, None, None]
+    k = np.clip(y / 0.65, 0, 1)
+    c = np.where(k < 0.6, np.array(top) + (np.array(mid) - np.array(top)) * (k / 0.6),
+                 np.array(mid) + (np.array(hor) - np.array(mid)) * ((k - 0.6) / 0.4))
+    sky = np.broadcast_to(c, (H, W, 3)).astype(np.float32).copy()
+    cx, cy = int(sun[0] * W), int(sun[1] * H)
+    ang, dist = _polar(W, H, cx, cy)
+    R = sun_r * H
+    glow = np.exp(-dist / (R * 2.2))
+    sky += glow[..., None] * np.array([255, 150, 60], np.float32) * 0.8
+    if rays:
+        ray = (0.5 + 0.5 * np.sin(ang * 18 + t * 0.6)) ** 6 * np.exp(-dist / (W * 0.45))
+        sky += ray[..., None] * np.array([255, 200, 120], np.float32) * 0.35
+    disc = np.clip((R - dist) / 2.0, 0, 1)
+    sky = sky * (1 - disc[..., None]) + disc[..., None] * np.array([255, 245, 210], np.float32)
+    return sky
+
+
+def embers(frame, t, n=160, seed=1, color=(255, 150, 40), vx=-260, vy=-120, size=2):
+    H, W = frame.shape[:2]
+    rng = np.random.default_rng(seed)
+    x0, y0 = rng.random(n) * W, rng.random(n) * H
+    sp = 0.5 + rng.random(n)
+    xs = ((x0 + vx * sp * t) % W).astype(int)
+    ys = ((y0 + vy * sp * t + np.sin(t * 3 + x0) * 10) % H).astype(int)
+    br = (0.5 + 0.5 * np.sin(t * 9 + x0)) * 0.8 + 0.2
+    for dy in range(size):
+        for dx in range(size):
+            yy, xx = np.clip(ys + dy, 0, H - 1), np.clip(xs + dx, 0, W - 1)
+            frame[yy, xx] += br[:, None] * np.array(color, np.float32)
+
+
+def speed_lines(frame, t, n=40, seed=3, speed=2600, alpha=0.35, y_range=(0, 1)):
+    H, W = frame.shape[:2]
+    rng = np.random.default_rng(seed)
+    for i in range(n):
+        y = int((y_range[0] + rng.random() * (y_range[1] - y_range[0])) * H)
+        L = int(80 + rng.random() * 260)
+        x = int((rng.random() * W * 2 - speed * (0.6 + rng.random()) * t) % (W * 2)) - W // 2
+        x0, x1 = max(0, x), min(W, x + L)
+        if x1 > x0:
+            frame[y:y + 2, x0:x1] = frame[y:y + 2, x0:x1] * (1 - alpha) + 255 * alpha
+
+
+# ---------------------------------------------------------------- post chain
+
+class Post:
+    def __init__(self, W, H, seed=7):
+        self.W, self.H = W, H
+        ys, xs = np.mgrid[0:H, 0:W].astype(np.float32)
+        r = np.sqrt(((xs - W / 2) / (W / 2)) ** 2 + ((ys - H / 2) / (H / 2)) ** 2)
+        self.vig = (1 - 0.42 * np.clip(r / 1.3, 0, 1) ** 2.2)[..., None].astype(np.float32)
+        rng = np.random.default_rng(seed)
+        self.grain = [rng.normal(0, 7, (H, W, 1)).astype(np.float32) for _ in range(6)]
+        self.rng = rng
+        self.n = 0
+
+    def __call__(self, f, tb, ts, fx):
+        """f float frame. tb: seconds since last beat; ts: seconds since cut."""
+        W, H = self.W, self.H
+        punch = fx.get('punch', 0.06) * math.exp(-tb / 0.09)
+        drift = fx.get('drift', 0.0) * ts
+        shake = fx.get('shake', 10) * math.exp(-tb / 0.12)
+        s = 1 + punch + drift
+        sx = self.rng.uniform(-1, 1) * shake
+        sy = self.rng.uniform(-1, 1) * shake
+        if s > 1.001 or shake > 0.5:
+            s = max(s, 1 + (abs(sx) + abs(sy)) * 2.2 / min(W, H))
+            cw, chh = W / s, H / s
+            x0 = (W - cw) / 2 + sx
+            y0 = (H - chh) / 2 + sy
+            x0 = min(max(0, x0), W - cw)
+            y0 = min(max(0, y0), H - chh)
+            img = Image.fromarray(np.clip(f, 0, 255).astype(np.uint8))
+            img = img.resize((W, H), Image.BILINEAR, box=(x0, y0, x0 + cw, y0 + chh))
+            f = np.asarray(img).astype(np.float32)
+        k = int(round(fx.get('chroma', 6) * math.exp(-tb / 0.07)))
+        if k:
+            f[..., 0] = np.roll(f[..., 0], k, axis=1)
+            f[..., 2] = np.roll(f[..., 2], -k, axis=1)
+        flash = fx.get('flash', 0.85) * math.exp(-ts / 0.05)
+        if flash > 0.01:
+            f = f + (255 - f) * flash
+        x = np.clip(f / 255.0, 0, 1)
+        x = x * x * (3 - 2 * x) * 0.35 + x * 0.65
+        g = x.mean(2, keepdims=True)
+        x = g + (x - g) * fx.get('sat', 1.18)
+        f = x * 255 * self.vig + self.grain[self.n % len(self.grain)]
+        self.n += 1
+        return np.clip(f, 0, 255).astype(np.uint8)

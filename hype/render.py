@@ -1,0 +1,175 @@
+"""Render an edit list to MP4. Every duration is in beats, so the same edit
+re-times itself to whatever song and tempo it is given.
+
+    python3 render.py <edit module> [--song FILE --start SEC --bpm N] [--hd] [--out FILE]
+"""
+import argparse
+import importlib.util
+import math
+import os
+import subprocess
+import sys
+
+import numpy as np
+from PIL import Image
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import audio  # noqa: E402
+import fx  # noqa: E402
+import shots  # noqa: E402
+
+
+class Clip:
+    """Frames from a video file: cover-fit, optional speed ramp, held on the last frame."""
+
+    def __init__(self, path, start, dur, W, H, fps, speed=1.0, crop=None):
+        vf = []
+        if crop:  # (x, y, w, h) as fractions of the source frame
+            vf.append('crop=iw*%f:ih*%f:iw*%f:ih*%f' % (crop[2], crop[3], crop[0], crop[1]))
+        vf += ['setpts=PTS/%f' % speed, 'fps=%d' % fps,
+               'scale=%d:%d:force_original_aspect_ratio=increase' % (W, H), 'crop=%d:%d' % (W, H)]
+        cmd = ['ffmpeg', '-v', 'error', '-ss', str(start), '-i', path, '-t', str(dur * speed + 0.5),
+               '-an', '-vf', ','.join(vf), '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-']
+        self.p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        self.W, self.H, self.last = W, H, None
+
+    def next(self):
+        b = self.p.stdout.read(self.W * self.H * 3)
+        if len(b) == self.W * self.H * 3:
+            self.last = np.frombuffer(b, np.uint8).reshape(self.H, self.W, 3).astype(np.float32)
+        if self.last is None:
+            self.last = np.zeros((self.H, self.W, 3), np.float32)
+        return self.last.copy()
+
+    def close(self):
+        self.p.kill()
+
+
+class Photo:
+    """A still with a slow push-in (or pull-out)."""
+
+    def __init__(self, path, W, H, zoom=(1.0, 1.12), center=(0.5, 0.5)):
+        im = Image.open(path).convert('RGB')
+        zm = max(zoom)
+        sc = max(W * zm / im.width, H * zm / im.height)
+        self.im = im.resize((math.ceil(im.width * sc), math.ceil(im.height * sc)), Image.LANCZOS)
+        self.W, self.H, self.zoom, self.c, self.zm = W, H, zoom, center, zm
+
+    def at(self, k):
+        z = self.zoom[0] + (self.zoom[1] - self.zoom[0]) * k
+        cw, ch = self.W * self.zm / z, self.H * self.zm / z
+        x0 = min(max(0, self.c[0] * self.im.width - cw / 2), self.im.width - cw)
+        y0 = min(max(0, self.c[1] * self.im.height - ch / 2), self.im.height - ch)
+        return np.asarray(self.im.resize((self.W, self.H), Image.BILINEAR, box=(x0, y0, x0 + cw, y0 + ch)), np.float32)
+
+
+def load_edit(path):
+    spec = importlib.util.spec_from_file_location('edit', path)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('edit')
+    ap.add_argument('--song')
+    ap.add_argument('--start', type=float, default=0.0, help='song time of beat 0 (a downbeat)')
+    ap.add_argument('--bpm', type=float)
+    ap.add_argument('--hd', action='store_true', help='1920x1080 60fps (default 1280x720 30fps draft)')
+    ap.add_argument('--vertical', action='store_true', help='9:16')
+    ap.add_argument('--out')
+    ap.add_argument('--only', help='render a beat range a:b for quick looks')
+    a = ap.parse_args()
+
+    E = load_edit(a.edit)
+    W, H, fps = (1920, 1080, 60) if a.hd else (1280, 720, 30)
+    if a.vertical:
+        W, H = H, W
+    bpm = a.bpm or getattr(E, 'BPM', 160)
+    beat = 60 / bpm
+    seq = E.SEQ
+    starts, b = [], 0.0
+    for s in seq:
+        starts.append(b)
+        b += s['beats']
+    total_beats = b
+    b0, b1 = 0.0, total_beats
+    if a.only:
+        b0, b1 = (float(v) for v in a.only.split(':'))
+    dur = (b1 - b0) * beat
+    out = a.out or os.path.join(HERE, 'out', os.path.splitext(os.path.basename(a.edit))[0] + '.mp4')
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+
+    wav = out + '.wav'
+    if a.song:
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', str(a.start + b0 * beat), '-i', a.song, '-t', str(dur),
+                        '-af', 'afade=t=out:st=%f:d=0.6' % max(0, dur - 0.6), '-ar', '44100', '-ac', '2', wav],
+                       check=True)
+    else:
+        braams = [(starts[i] - b0) * beat for i, s in enumerate(seq) if s.get('braam') and b0 <= starts[i] < b1]
+        scr = [(starts[i] - b0 + s.get('screech')) * beat for i, s in enumerate(seq)
+               if s.get('screech') is not None and b0 <= starts[i] < b1]
+        audio.drums(bpm, dur, wav, braams=braams, screech=scr[0] if scr else None)
+
+    enc = subprocess.Popen(['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', '%dx%d' % (W, H),
+                            '-r', str(fps), '-i', '-', '-i', wav, '-c:v', 'libx264', '-preset', 'medium', '-crf', '18',
+                            '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '256k', '-shortest', '-movflags', '+faststart',
+                            out], stdin=subprocess.PIPE)
+    post = fx.Post(W, H)
+    src, src_i = None, -1
+    nframes = int(round(dur * fps))
+    for i in range(nframes):
+        t = b0 * beat + i / fps
+        bt = t / beat
+        k = max(j for j in range(len(seq)) if starts[j] <= bt + 1e-9)
+        s = seq[k]
+        ts = t - starts[k] * beat
+        sdur = s['beats'] * beat
+        p = s.get('p', {})
+        if k != src_i:
+            if src is not None and hasattr(src, 'close'):
+                src.close()
+            src_i = k
+            if 'clip' in s:
+                src = Clip(os.path.join(HERE, s['clip']), s.get('in', 0.0), sdur, W, H, fps, s.get('speed', 1.0),
+                           s.get('crop'))
+            elif 'photo' in s:
+                src = Photo(os.path.join(HERE, s['photo']), W, H, s.get('zoom', (1.0, 1.15)), s.get('center', (0.5, 0.5)))
+            else:
+                src = None
+        if 'clip' in s:
+            f = src.next()
+        elif 'photo' in s:
+            f = src.at(ts / sdur)
+        else:
+            f = shots.SHOTS[s['shot']](ts, sdur, W, H, p)
+        if s.get('dim'):
+            f *= 1 - s['dim']
+        texts = s.get('text', [])
+        for j, tx in enumerate(texts):
+            st = tx[0] * beat
+            end = tx[5] * beat if len(tx) > 5 and tx[5] is not None else (
+                texts[j + 1][0] * beat if j + 1 < len(texts) and not s.get('stack') else sdur)
+            if st <= ts < end:
+                size = tx[2] * H / 720
+                fx.text(f, tx[1], size, cy=tx[3], style=tx[4], slam_t=ts - st)
+        tb = (bt - math.floor(bt + 1e-9)) * beat
+        every = s.get('fx', {}).get('every', 1)
+        if every > 1:
+            tb = ((bt - starts[k]) % every) * beat
+        frame = post(f, tb, ts, s.get('fx', {}))
+        enc.stdin.write(frame.tobytes())
+        if i % 30 == 0:
+            print('\rframe %d/%d' % (i, nframes), end='', flush=True)
+    enc.stdin.close()
+    enc.wait()
+    if src is not None and hasattr(src, 'close'):
+        src.close()
+    os.remove(wav)
+    print('\n' + out)
+
+
+if __name__ == '__main__':
+    main()

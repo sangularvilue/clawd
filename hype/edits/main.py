@@ -73,7 +73,9 @@ SEQ = [
     C('drone', 'DRONE STRIKE', 'thermal footage, official release', 1),
     C('starship', 'STARSHIP', 'booster caught by the chopsticks', 2),
     # +16  KEY CHANGE: Washington
-    AI('washington_trex', 'trex', 4, speed=1.6, crop=(0.05, 0.03, 0.84, 0.84), fx=dict(punch=0.09, drift=0.10, shake=14, chroma=9)),
+    AI('washington_trex', 'trex', 2, speed=2.2, crop=(0.05, 0.03, 0.84, 0.84), fx=dict(punch=0.09, drift=0.10, shake=14, chroma=9)),
+    C('starship_2', 'STARSHIP', 'Flight 7 liftoff from overhead', 1),
+    C('iss_2', 'ISS', 'spacewalk over Earth', 1),
     # +20
     C('b2', 'B-2', 'flyover, official footage', 1),
     C('bodybuilder_2', 'BODYBUILDER', 'second posing/lifting shot', 1),
@@ -86,7 +88,9 @@ SEQ = [
     C('saddam', 'SADDAM', 'spider-hole briefing diagram', 2, photo=True, fit='contain', zoom=(1.0, 1.1),
       center=(0.5, 0.5)),
     # +32  Lincoln
-    AI('lincoln_chopper', 'chopper', 4, speed=1.6, crop=(0.04, 0.06, 0.84, 0.84), fx=dict(punch=0.09, drift=0.10, shake=14, chroma=9)),
+    AI('lincoln_chopper', 'chopper', 2, speed=2.2, crop=(0.04, 0.06, 0.84, 0.84), fx=dict(punch=0.09, drift=0.10, shake=14, chroma=9)),
+    C('b2_2', 'B-2', 'rolling pass', 1),
+    C('moon_flag_2', 'APOLLO', 'lunar rover rooster tail', 1),
     # +36
     C('top_gun', 'TOP GUN', 'carrier launch, afterburner at sunset', 2, **{'in': 1.4}),
     C('rudy', 'RUDY', 'carried off the field', 2),
@@ -105,7 +109,11 @@ SEQ = [
     C('iss', 'ISS', 'the station over Earth', 2),
     C('rocky_steps', 'ROCKY', 'top of the steps, arms raised', 2),
     # +52  Reagan
-    AI('reagan_samurai', 'duel', 4, speed=1.6, crop=(0.10, 0.12, 0.72, 0.72), fx=dict(punch=0.09, drift=0.10, shake=14, chroma=9)),
+    AI('reagan_samurai', 'duel', 2, speed=2.2, crop=(0.10, 0.12, 0.72, 0.72), fx=dict(punch=0.09, drift=0.10, shake=14, chroma=9)),
+    *strobe(C('flag', 'FLAG', 'giant flag', 1, fallback='flag', **{'in': 1.5}),
+            C('boom_2', 'EXPLOSION', 'second fireball', 1, fallback='boom', **{'in': 0.8}),
+            C('flag_2', 'FLAG', 'giant flag, second shot', 1, fallback='flag', **{'in': 1.5}),
+            C('boom', 'EXPLOSION', 'huge fireball', 1, fallback='boom', **{'in': 0.6})),
     # +56  one cut per beat, then two-beat holds
     C('ice_2', 'ICE', 'second angle', 1),
     C('bodybuilder', 'BODYBUILDER', 'Arnold flexing on stage', 1),

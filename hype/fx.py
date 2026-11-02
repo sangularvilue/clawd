@@ -5,7 +5,7 @@ import os
 from functools import lru_cache
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FONTS = os.path.join(HERE, 'fonts')
@@ -17,50 +17,71 @@ BLUE = (0, 40, 104)
 
 # ---------------------------------------------------------------- fonts / text
 
+DEFAULT_FONT = 'ChakraPetch-700.ttf'
+
+
 @lru_cache(maxsize=64)
-def font(size, name='Anton.ttf'):
+def font(size, name=DEFAULT_FONT):
     return ImageFont.truetype(os.path.join(FONTS, name), int(size))
 
 
+def _line_width(f, line, track):
+    return sum(f.getlength(c) for c in line) + track * max(0, len(line) - 1)
+
+
 @lru_cache(maxsize=256)
-def _text_rgba(text, size, style, name):
-    f = font(size, name)
-    lines = text.split('\n')
-    boxes = [f.getbbox(l) for l in lines]
-    lh = int(size * 1.02)
-    w = max(b[2] - b[0] for b in boxes)
-    pad = int(size * 0.25)
-    off = max(4, int(size * 0.06))
-    img = Image.new('RGBA', (w + pad * 2 + off * 2, lh * len(lines) + pad * 2 + off * 2), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    stroke = max(3, int(size * 0.035))
+def _text_rgba(text, size, style, name, max_w):
+    track_k = 0.0 if style == 'mono' else 0.06
+    while True:
+        f = font(size, name)
+        track = size * track_k
+        lines = text.split('\n')
+        w = int(max(_line_width(f, l, track) for l in lines))
+        if not max_w or w <= max_w or size < 12:
+            break
+        size = int(size * max_w / w) - 1
+    asc, desc = f.getmetrics()
+    lh = int(size * 1.08)
+    pad = int(size * 0.35)
+    img = Image.new('RGBA', (w + pad * 2, lh * len(lines) + pad * 2), (0, 0, 0, 0))
+    glyphs = Image.new('L', img.size, 0)
+    d = ImageDraw.Draw(glyphs)
     for i, l in enumerate(lines):
-        b = boxes[i]
-        x = pad + (w - (b[2] - b[0])) // 2 - b[0]
-        y = pad + i * lh - b[1] + (lh - (b[3] - b[1])) // 2
-        if style == 'usa':
-            d.text((x + off * 2, y + off * 2), l, font=f, fill=BLUE + (255,), stroke_width=stroke, stroke_fill=(0, 0, 0, 255))
-            d.text((x + off, y + off), l, font=f, fill=RED + (255,), stroke_width=stroke, stroke_fill=(0, 0, 0, 255))
-            d.text((x, y), l, font=f, fill=(255, 255, 255, 255), stroke_width=stroke, stroke_fill=(0, 0, 0, 255))
-        elif style == 'gold':
-            d.text((x + off, y + off), l, font=f, fill=(0, 0, 0, 200))
-            d.text((x, y), l, font=f, fill=(255, 205, 60, 255), stroke_width=stroke, stroke_fill=(60, 20, 0, 255))
-        elif style == 'mono':
-            d.text((x, y), l, font=f, fill=(255, 255, 255, 255))
-        else:  # 'plain' white with black stroke
-            d.text((x, y), l, font=f, fill=(255, 255, 255, 255), stroke_width=stroke, stroke_fill=(0, 0, 0, 255))
-    return np.asarray(img).astype(np.float32)
+        x = pad + (w - _line_width(f, l, track)) / 2
+        y = pad + i * lh + (lh - asc - desc) / 2
+        for c in l:
+            d.text((x, y), c, font=f, fill=255)
+            x += f.getlength(c) + track
+    if style == 'mono':
+        g = np.asarray(glyphs, np.float32)
+        return np.dstack([np.full(g.shape + (3,), 255, np.float32), g])
+    shadow = glyphs.filter(ImageFilter.GaussianBlur(max(2, size / 14)))
+    edge = glyphs.filter(ImageFilter.MaxFilter(3 if size < 60 else 5))
+    sh = np.asarray(shadow, np.float32) / 255
+    ed = np.asarray(edge, np.float32) / 255
+    g = np.asarray(glyphs, np.float32) / 255
+    color = {'gold': (255, 205, 60)}.get(style, (255, 255, 255))
+    a = np.clip(np.maximum(sh * 0.9, ed * 0.6), 0, 1)
+    rgb = np.zeros(g.shape + (3,), np.float32)
+    rgb += g[..., None] * np.array(color, np.float32)
+    alpha = np.maximum(a, g)
+    return np.dstack([rgb / np.maximum(alpha, 1e-6)[..., None], alpha * 255])
 
 
-def text(frame, s, size, cx=0.5, cy=0.5, style='usa', slam_t=None, name='Anton.ttf', alpha=1.0):
+def text(frame, s, size, cx=0.5, cy=0.5, style='clean', slam_t=None, name=DEFAULT_FONT, alpha=1.0, max_w=0.9):
     """Composite text onto float frame. slam_t: seconds since the slam began
-    (text drops in from oversized and lands hard)."""
+    (text drops in from oversized and lands hard). Lines wider than max_w of the
+    frame are shrunk to fit."""
     H, W = frame.shape[:2]
     scale = 1.0
     if slam_t is not None:
         scale = 1.0 + 0.9 * math.exp(-max(0.0, slam_t) / 0.04)
         scale = round(scale * 25) / 25
-    rgba = _text_rgba(s, int(size * scale), style, name)
+    rgba = _text_rgba(s, int(size), style, name, int(max_w * W) if max_w else 0)
+    if scale != 1.0:
+        img = Image.fromarray(np.clip(rgba, 0, 255).astype(np.uint8), 'RGBA')
+        img = img.resize((max(1, int(img.width * scale)), max(1, int(img.height * scale))), Image.BILINEAR)
+        rgba = np.asarray(img).astype(np.float32)
     paste(frame, rgba, int(cx * W - rgba.shape[1] / 2), int(cy * H - rgba.shape[0] / 2), alpha)
 
 

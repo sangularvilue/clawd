@@ -11,7 +11,7 @@ import subprocess
 import sys
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -47,17 +47,36 @@ class Clip:
 
 
 class Photo:
-    """A still with a slow push-in (or pull-out)."""
+    """A still with a slow push-in. fit='cover' fills the frame; fit='contain' shows the whole
+    image over a blurred, darkened copy of itself (for portrait photos that must stay readable)."""
 
-    def __init__(self, path, W, H, zoom=(1.0, 1.12), center=(0.5, 0.5)):
+    def __init__(self, path, W, H, zoom=(1.0, 1.12), center=(0.5, 0.5), fit='cover'):
         im = Image.open(path).convert('RGB')
         zm = max(zoom)
+        self.W, self.H, self.zoom, self.c, self.zm, self.fit = W, H, zoom, center, zm, fit
+        if fit == 'contain':
+            s = max(W / im.width, H / im.height) * 1.1
+            bg = im.resize((math.ceil(im.width * s), math.ceil(im.height * s)), Image.BILINEAR)
+            x0, y0 = (bg.width - W) // 2, (bg.height - H) // 2
+            bg = bg.crop((x0, y0, x0 + W, y0 + H)).filter(ImageFilter.GaussianBlur(H / 40))
+            self.bg = np.asarray(bg, np.float32) * 0.45
+            self.fg = im
+            return
         sc = max(W * zm / im.width, H * zm / im.height)
         self.im = im.resize((math.ceil(im.width * sc), math.ceil(im.height * sc)), Image.LANCZOS)
-        self.W, self.H, self.zoom, self.c, self.zm = W, H, zoom, center, zm
 
     def at(self, k):
         z = self.zoom[0] + (self.zoom[1] - self.zoom[0]) * k
+        if self.fit == 'contain':
+            f = self.bg.copy()
+            base = min(self.W * 0.94 / self.fg.width, self.H * 0.94 / self.fg.height)
+            w, h = self.fg.width * base * z, self.fg.height * base * z
+            fg = np.asarray(self.fg.resize((int(w), int(h)), Image.BILINEAR), np.float32)
+            x = int(self.W / 2 - w / 2)
+            y = int(self.H * 0.03 - (h - self.H * 0.94) * self.c[1])
+            rgba = np.concatenate([fg, np.full(fg.shape[:2] + (1,), 255, np.float32)], 2)
+            fx.paste(f, rgba, x, y)
+            return f
         cw, ch = self.W * self.zm / z, self.H * self.zm / z
         x0 = min(max(0, self.c[0] * self.im.width - cw / 2), self.im.width - cw)
         y0 = min(max(0, self.c[1] * self.im.height - ch / 2), self.im.height - ch)
@@ -141,7 +160,8 @@ def main():
                 src = Clip(os.path.join(HERE, s['clip']), s.get('in', 0.0), sdur, W, H, fps, s.get('speed', 1.0),
                            s.get('crop'))
             elif 'photo' in s:
-                src = Photo(os.path.join(HERE, s['photo']), W, H, s.get('zoom', (1.0, 1.15)), s.get('center', (0.5, 0.5)))
+                src = Photo(os.path.join(HERE, s['photo']), W, H, s.get('zoom', (1.0, 1.15)), s.get('center', (0.5, 0.5)),
+                            s.get('fit', 'cover'))
             else:
                 src = None
         if 'clip' in s:
@@ -159,7 +179,7 @@ def main():
                 texts[j + 1][0] * beat if j + 1 < len(texts) and not s.get('stack') else sdur)
             if st <= ts < end:
                 size = tx[2] * H / 720
-                fx.text(f, tx[1], size, cy=tx[3], style=tx[4], slam_t=ts - st)
+                fx.text(f, tx[1], size, cy=tx[3], style=tx[4] if len(tx) > 4 else 'clean', slam_t=ts - st)
         tb = (bt - math.floor(bt + 1e-9)) * beat
         every = s.get('fx', {}).get('every', 1)
         if every > 1:

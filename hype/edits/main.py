@@ -20,6 +20,17 @@ def C(key, label, desc, beats, **kw):
     return dict(shot='slot', beats=beats, p=dict(label=label, desc=desc, kind=kind), **kw)
 
 
+def AI(key, fallback, beats, **kw):
+    """A generated-video clip (hype/generated/<key>.mp4, made by gen_video.py) if it exists,
+    otherwise the drawn shot."""
+    path = os.path.join(HERE, 'generated', key + '.mp4')
+    if os.path.exists(path):
+        kw.pop('p', None)
+        return dict(clip=path, beats=beats, **kw)
+    kw.pop('in', None)
+    return dict(shot=fallback, beats=beats, **kw)
+
+
 def G(shot, beats, **kw):
     return dict(shot=shot, beats=beats, **kw)
 
@@ -54,13 +65,13 @@ SEQ = [
       text=[(0.3, "THE MOON? WE'VE BEEN.", 96, 0.84, 'usa')]),
 
     # ---- first wave
-    G('trex', 4, braam=True, fx=dict(every=2, punch=0.05),
+    AI('washington_trex', 'trex', 4, braam=True, fx=dict(every=2, punch=0.05),
       text=[(1, 'I CANNOT TELL A LIE', 92, 0.86, 'usa'), (2.5, 'THIS RULES', 130, 0.84, 'usa')]),
     C('flyover', 'FLYOVER', 'jets over a packed stadium', 2,
       text=[(0.5, 'SKY: CLAIMED', 130, 0.5, 'usa')]),
     C('nd_sign', 'NOTRE DAME', 'slapping the Play Like a Champion sign', 1),
     C('rocky_punch', 'ROCKY IV', 'haymaker on Drago', 1),
-    G('chopper', 4, fx=dict(every=2, punch=0.05),
+    AI('lincoln_chopper', 'chopper', 4, fx=dict(every=2, punch=0.05),
       text=[(0.5, 'FOUR SCORE AND', 92, 0.18, 'usa'), (2, 'SEVEN GEARS AGO', 104, 0.18, 'usa')]),
     C('ice', 'ICE', 'agents moving in, official footage', 1),
     C('drone', 'DRONE STRIKE', 'thermal footage, official release', 1),
@@ -90,8 +101,8 @@ SEQ = [
             C('drone', 'DRONE STRIKE', 'impact', 1, **{'in': 1.5}), G('boom', 1, text=USA),
             C('rocky_punch_2', 'ROCKY IV', 'punch', 1), G('flag', 1, p=dict(t0=2), text=USA),
             C('shuttle', 'SHUTTLE', 'launch', 1, **{'in': 1.0}), G('boom', 1, p=dict(booms=[(0.3, 0.6, 260, 0), (0.75, 0.5, 300, 0.05)]))),
-    G('trex', 2, p=dict(), fx=dict(punch=0.07)),
-    G('chopper', 2, fx=dict(punch=0.07)),
+    AI('washington_trex', 'trex', 2, fx=dict(punch=0.07), **{'in': 4.0}),
+    AI('lincoln_chopper', 'chopper', 2, fx=dict(punch=0.07), **{'in': 4.0}),
 
     # ---- third wave: one cut per beat
     C('touchdown_jesus', 'NOTRE DAME', 'Touchdown Jesus', 2, braam=True),

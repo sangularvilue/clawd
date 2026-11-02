@@ -85,8 +85,7 @@ SEQ = [
     # +32  Lincoln
     AI('lincoln_chopper', 'chopper', 4, fx=dict(every=2, punch=0.05)),
     # +36
-    C('game', 'VIDEO GAME', 'Senator Armstrong, Metal Gear Rising', 1),
-    C('bodybuilder', 'BODYBUILDER', 'Arnold flexing on stage', 1),
+    C('top_gun', 'TOP GUN', 'carrier launch, afterburner at sunset', 2),
     C('rudy', 'RUDY', 'carried off the field', 2),
     # +40  half-beat strobe
     *strobe(C('nd_sign', 'NOTRE DAME', 'sign slap', 1, **{'in': 0.25}),
@@ -106,7 +105,7 @@ SEQ = [
     AI('reagan_samurai', 'duel', 4, fx=dict(punch=0.05)),
     # +56  one cut per beat, then two-beat holds
     C('ice_2', 'ICE', 'second angle', 1),
-    C('blue_angels', 'BLUE ANGELS', 'diamond formation', 1),
+    C('bodybuilder', 'BODYBUILDER', 'Arnold flexing on stage', 1),
     C('drago', 'ROCKY IV', 'Drago goes down', 1),
     C('nd_band', 'NOTRE DAME', 'band hits the Victory March', 1),
     C('t1000', 'T-1000', 'walks out of the fire', 2),

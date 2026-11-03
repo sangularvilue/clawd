@@ -36,7 +36,7 @@ NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
 # channel: (bank, preset, channel volume)
 MELODY, CHORDS, PEDAL, MEL_LO = 0, 1, 2, 3
-VOICES = {MELODY: (8, 19, 118), CHORDS: (0, 19, 92), PEDAL: (0, 19, 112), MEL_LO: (0, 19, 70)}
+VOICES = {MELODY: (8, 19, 127), CHORDS: (0, 19, 76), PEDAL: (0, 19, 108), MEL_LO: (8, 19, 58)}  # MEL_LO = 4' octave-up doubling
 
 
 def load_stereo(path, sr=SR):
@@ -154,6 +154,24 @@ def melody_from_f0(vocals, cache_json, min_note=0.08):
     return notes
 
 
+def top_line(notes, min_amp=0.3, min_dur=0.08):
+    """Highest voice of a polyphonic transcription (the riff/hook of the instrument stem)."""
+    out = []
+    for s, e, p, a in sorted((n for n in notes if n[3] >= min_amp and n[1] - n[0] >= min_dur),
+                             key=lambda n: (n[0], -n[2])):
+        if out and s < out[-1][1]:
+            ps, pe, pp, pa = out[-1]
+            if s - ps <= 0.05:
+                if p > pp:
+                    out[-1] = (s, e, p, a)
+            elif p > pp:
+                out[-1] = (ps, s, pp, pa)
+                out.append((s, e, p, a))
+            continue
+        out.append((s, e, p, a))
+    return out
+
+
 # ---------------------------------------------------------------- 3. chords
 
 TEMPL = []
@@ -216,16 +234,16 @@ def voicing(root, q, prev):
     """Close triad (+ doubled root) in F3..A4, choosing the inversion nearest the last chord."""
     pcs = [root % 12, (root + (4 if q == 'maj' else 3)) % 12, (root + 7) % 12]
     options = []
-    for base in range(53, 66):
+    for base in range(52, 62):
         notes = sorted({base + ((pc - base) % 12) for pc in pcs})
-        if notes[-1] <= 72:
+        if notes[-1] <= 67:
             options.append(notes)
     if prev is None:
         return min(options, key=lambda v: abs(np.mean(v) - 61))
     return min(options, key=lambda v: sum(min(abs(a - b) for b in prev) for a in v))
 
 
-def arrange(notes_mel, notes_bass, chord_segs, beat_times, drums_db, loud_db, step):
+def arrange(notes_mel, notes_bass, chord_segs, beat_times, drums_db, loud_db, step, notes_riff=()):
     ev = []  # (time, order, kind, chan, key, val); order: 0 noteoff, 1 cc, 2 noteon
 
     def note(ch, t0, t1, key, vel):
@@ -240,14 +258,21 @@ def arrange(notes_mel, notes_bass, chord_segs, beat_times, drums_db, loud_db, st
         k = round((t - beat_times[0]) / grid)
         return beat_times[0] + k * grid
 
-    # melody: solo stop, centered around D5, doubled softly an octave below
-    if notes_mel:
-        med = np.median([n[2] for n in notes_mel])
-        shift = 12 * round((74 - med) / 12)
-        for s, e, p, a in notes_mel:
+    # lead: the vocal melody on a solo stop around D5 with a soft 4' octave above;
+    # the instrumental riff takes over wherever the vocal rests for a beat or more
+    def lead(notes, center, vel):
+        if not notes:
+            return
+        shift = 12 * round((center - np.median([n[2] for n in notes])) / 12)
+        for s, e, p, a in notes:
             s2, e2 = snap(s, step), max(snap(e, step), snap(s, step) + step)
-            note(MELODY, s2, e2 - 0.01, p + shift, 112)
-            note(MEL_LO, s2, e2 - 0.01, p + shift - 12, 85)
+            note(MELODY, s2, e2 - 0.01, p + shift, vel)
+            note(MEL_LO, s2, e2 - 0.01, p + shift + 12, int(vel * 0.6))
+
+    lead(notes_mel, 74, 118)
+    gaps = [n for n in notes_riff
+            if not any(m[0] - beat < n[1] and n[0] < m[1] + beat * 0.5 for m in notes_mel)]
+    lead(gaps, 74, 108)
 
     # chords: pulse 8ths when the drums drive, otherwise hold
     thr = np.percentile(drums_db, 60)
@@ -257,15 +282,15 @@ def arrange(notes_mel, notes_bass, chord_segs, beat_times, drums_db, loud_db, st
         prev = v
         bi = int(np.searchsorted(beat_times, t0))
         driving = drums_db[min(bi, len(drums_db) - 1)] >= thr
-        if driving:
+        if driving:  # quarter-note pulse
             t = t0
             while t < t1 - 0.01:
                 for k in v:
-                    note(CHORDS, t, t + q * 0.82, k, 96)
-                t += q
+                    note(CHORDS, t, t + beat * 0.88, k, 84)
+                t += beat
         else:
             for k in v:
-                note(CHORDS, t0, t1 - 0.02, k, 90)
+                note(CHORDS, t0, t1 - 0.02, k, 80)
 
     # pedal: transcribed bass in the 16' octave; fall back to chord roots where the bass is silent
     covered = np.zeros(len(chord_segs), bool)
@@ -334,7 +359,7 @@ def render(ev, t_start, t_end, sf2):
     return np.concatenate(chunks).reshape(-1, 2).T
 
 
-def cathedral(x, rt60=3.2, wet=0.42):
+def cathedral(x, rt60=2.4, wet=0.3, hp=200.0):
     n = int(rt60 * 1.2 * SR)
     t = np.arange(n) / SR
     rng = np.random.default_rng(7)
@@ -349,7 +374,10 @@ def cathedral(x, rt60=3.2, wet=0.42):
         for d, g in ((0.011, 0.5), (0.019, 0.35), (0.027, 0.3)):  # early reflections
             ir[int(d * SR)] += g * (1 if ch else -1)
         ir /= np.sqrt(np.sum(ir ** 2))
-        w = np.fft.irfft(np.fft.rfft(x[ch], nfft) * np.fft.rfft(ir, nfft), nfft)[:x.shape[1]]
+        X = np.fft.rfft(x[ch], nfft)
+        f = np.fft.rfftfreq(nfft, 1 / SR)
+        X *= 1 / (1 + (hp / np.maximum(f, 1)) ** 4)  # keep the low end out of the reverb
+        w = np.fft.irfft(X * np.fft.rfft(ir, nfft), nfft)[:x.shape[1]]
         out[ch] = x[ch] * (1 - wet) + w * wet * 2.2
     return out
 
@@ -393,7 +421,8 @@ def main():
 
     drums_db = beat_db(stems['drums'])
     mix_db = beat_db(a.song)
-    ev = arrange(mel, bas, segs, beat_times, drums_db, mix_db, step)
+    riff = top_line(transcribe(stems['other'], os.path.join(cache, 'other.json'), 100, 2100, 0.5, 0.3, 90))
+    ev = arrange(mel, bas, segs, beat_times, drums_db, mix_db, step, riff)
     t0 = a.start
     t1 = a.start + a.dur if a.dur else full
     x = render(ev, t0, t1, a.sf2)

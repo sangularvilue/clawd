@@ -343,6 +343,54 @@ def limit(x, ceiling=0.97, lookahead=0.005, release=0.15):
     return np.clip(x * gs, -ceiling, ceiling)
 
 
+def mix_parts(out, stems, notes, final_notes, final_t0, final_gain_db, parts, swell, stacks, sf2,
+              organ_db=1.0, master_db=0.0, write_stems=False, tail=0.0):
+    """Render the organ part by part over the Demucs backing and write the limited mix.
+    Each part (dict: label, t0, t1 or None for 'to the end', reverb [rt60, wet, hp], boost_db,
+    final) gets its own room and level: the organ's RMS over the sung notes there matches
+    the singer's, plus the part's boost. The closing chord (final_notes, from final_t0) is
+    levelled on its own so it crowns the band instead of crushing it."""
+    from scipy.signal import butter, sosfiltfilt
+    backing = sum(organ.load_stereo(stems[k]) for k in ('drums', 'bass', 'other'))
+    vocal = organ.load_stereo(stems['vocals'])
+    n = min(backing.shape[1], vocal.shape[1])
+    pad = int(tail * SR)  # room for the organ's last reverb past the end of the recording
+    backing = np.pad(backing[:, :n], ((0, 0), (0, pad)))
+    vocal = np.pad(vocal[:, :n], ((0, 0), (0, pad)))
+    n += pad
+    length = n / SR
+    organ_x = np.zeros((2, n), np.float32)
+    for part in parts:
+        t0, t1 = part['t0'], part['t1'] if part['t1'] is not None else length
+        sel = [x for x in notes if t0 <= x[0] < t1]
+        if not sel:
+            continue
+        dry = render(sel, stacks, sf2, swell, length)
+        if part.get('final') and final_notes:
+            dry += render(final_notes, stacks, sf2, swell, length) * 10 ** (final_gain_db / 20)
+        dry = sosfiltfilt(butter(2, 25, 'highpass', fs=SR, output='sos'), dry, axis=1)  # sample DC, rumble
+        rt, wet, hp = part['reverb']
+        x = organ.cathedral(dry, rt60=rt, wet=wet, hp=hp)
+        voiced = np.zeros(n, bool)
+        for s, e, _, r in sel:
+            if r not in ('chord', 'pedal') and (final_t0 is None or s < final_t0):
+                voiced[int(s * SR):min(n, int(e * SR))] = True
+        rms = lambda z: np.sqrt(np.mean(z[:, :n][:, voiced] ** 2)) + 1e-9
+        g = rms(vocal) / rms(x) * 10 ** ((organ_db + part.get('boost_db', 0)) / 20)
+        organ_x += x[:, :n] * g
+        print('  %s: reverb %.1f s, organ %+.1f dB vs. the vocal' % (part['label'], rt, organ_db + part.get('boost_db', 0)))
+    mix = backing[:, :n] + organ_x
+    if write_stems:  # the organ alone and the backing alone, at the mix's scale, for video editing
+        import soundfile as sf
+        sf.write(out[:-4] + '.organ.wav', organ_x.T, SR, subtype='FLOAT')
+        sf.write(out[:-4] + '.backing.wav', backing[:, :n].T, SR, subtype='FLOAT')
+    pk = np.abs(mix).max(0)
+    w = SR // 2
+    loud = sorted(((pk[i:i + w].max(), i / SR) for i in range(0, n - w, w)), reverse=True)[:5]
+    print('  limiter: loudest peaks %s' % ', '.join('%+.1f dB at %.1f s' % (20 * np.log10(v / 0.97), t) for v, t in loud))
+    organ.write_wav(out, limit(mix * 10 ** (master_db / 20)))
+
+
 def note_midi(name):
     letters = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}
     m = letters[name[0]]
@@ -375,6 +423,7 @@ def main():
     ap.add_argument('--organ-db', type=float, default=1.0, help='organ level vs. the original vocal')
     ap.add_argument('--sf2', default=organ.SF2)
     ap.add_argument('--stems', action='store_true', help='also write the organ and the backing on their own')
+    ap.add_argument('--final-release', type=float, help="override the closing chord's release time (s)")
     a = ap.parse_args()
     cfg = json.load(open(a.config)) if a.config else {}
     for k in ('bpm', 'vocal_bars', 'five_four', 'sections'):
@@ -436,6 +485,8 @@ def main():
     pedal = cfg.get('pedal', {})
     pev = sorted((bar_time(int(b), bt) - a.lead, note_midi(nm), int(b)) for b, evs in pedal.items() for bt, nm in evs)
     fc = cfg.get('final_chord')
+    if fc and a.final_release:
+        fc = dict(fc, release=a.final_release)
     end_t, final_notes = None, []
     if fc:
         t0 = bar_time(fc['bar']) - a.lead
@@ -457,49 +508,15 @@ def main():
         floors.append((bar_time(fc['bar']), end_t + 1, 127))
     swell = [(t, max([v] + [fv for t0, t1, fv in floors if t0 <= t < t1])) for t, v in swell]
 
-    backing = sum(organ.load_stereo(stems[k]) for k in ('drums', 'bass', 'other'))
-    vocal = organ.load_stereo(stems['vocals'])
-    n = min(backing.shape[1], vocal.shape[1])
-    length = n / SR
-
-    # each part of the song gets its own room and level: the organ's RMS over the sung notes
-    # matches the singer's there, plus that part's boost
-    parts = cfg.get('parts', [{'bars': '1-999', 'reverb': [1.8, 0.25, 250.0], 'boost_db': 0}])
-    organ_x = np.zeros((2, n), np.float32)
-    for part in parts:
+    final_t0 = bar_time(fc['bar']) - 0.1 if fc else None
+    parts = []
+    for part in cfg.get('parts', [{'bars': '1-999', 'reverb': [1.8, 0.25, 250.0], 'boost_db': 0}]):
         bs = bar_set(part['bars'])
-        t0, t1 = bar_time(min(bs)) - 0.3, bar_time(min(max(bs) + 1, max(starts))) - 0.3
-        if fc and fc['bar'] in bs:
-            t1 = length
-        sel = [x for x in notes if t0 <= x[0] < t1]
-        if not sel:
-            continue
-        dry = render(sel, stacks, a.sf2, swell, length)
-        if fc and fc['bar'] in bs:  # the closing chord, levelled on its own so it crowns the band, not crushes it
-            dry += render(final_notes, stacks, a.sf2, swell, length) * 10 ** (fc.get('gain_db', 0) / 20)
-        from scipy.signal import butter, sosfiltfilt
-        dry = sosfiltfilt(butter(2, 25, 'highpass', fs=SR, output='sos'), dry, axis=1)  # sample DC, rumble
-        rt, wet, hp = part['reverb']
-        x = organ.cathedral(dry, rt60=rt, wet=wet, hp=hp)
-        voiced = np.zeros(n, bool)
-        for s, e, _, r in sel:
-            if r not in ('chord', 'pedal') and (not fc or s < bar_time(fc['bar']) - 0.1):
-                voiced[int(s * SR):min(n, int(e * SR))] = True
-        rms = lambda z: np.sqrt(np.mean(z[:, :n][:, voiced] ** 2)) + 1e-9
-        g = rms(vocal) / rms(x) * 10 ** ((a.organ_db + part.get('boost_db', 0)) / 20)
-        organ_x += x[:, :n] * g
-        print('  bars %s: reverb %.1f s, organ %+.1f dB vs. the vocal' % (part['bars'], rt, a.organ_db + part.get('boost_db', 0)))
-    mix = backing[:, :n] + organ_x
-    if a.stems:  # the organ alone and the backing alone, at the mix's scale, for video editing
-        import soundfile as sf
-        sf.write(a.out[:-4] + '.organ.wav', organ_x.T, SR, subtype='FLOAT')
-        sf.write(a.out[:-4] + '.backing.wav', backing[:, :n].T, SR, subtype='FLOAT')
-    pk = np.abs(mix).max(0)
-    w = SR // 2
-    loud = sorted(((pk[i:i + w].max(), i / SR) for i in range(0, n - w, w)), reverse=True)[:5]
-    print('  limiter: loudest peaks %s' % ', '.join('%+.1f dB at %.1f s' % (20 * np.log10(v / 0.97), t) for v, t in loud))
-    mix = limit(mix * 10 ** (cfg.get('master_db', 0) / 20))
-    organ.write_wav(a.out, mix)
+        has_final = bool(fc and fc['bar'] in bs)
+        parts.append(dict(part, label='bars ' + str(part['bars']), t0=bar_time(min(bs)) - 0.3,
+                          t1=None if has_final else bar_time(min(max(bs) + 1, max(starts))) - 0.3, final=has_final))
+    mix_parts(a.out, stems, notes, final_notes, final_t0, fc.get('gain_db', 0) if fc else 0, parts, swell,
+              stacks, a.sf2, a.organ_db, cfg.get('master_db', 0), a.stems, cfg.get('tail', 0.0))
     json.dump([dict(start=s, end=e, midi=int(p), reg=r) for s, e, p, r in notes + final_notes], open(a.out + '.notes.json', 'w'))
     print('notes %d (melody %d)  -> %s' % (len(notes), len(aligned), a.out))
 

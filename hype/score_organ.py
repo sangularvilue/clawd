@@ -1,9 +1,10 @@
 """Play a song's vocal line on pipe organ from a score, aligned to the real singer, over the backing.
 
-    python3 score_organ.py <song> <score_notes.json> <out.wav> --bpm 96 \
-        --vocal-bars 5-24,29-48,59-78 --five-four 11,12,35,36,61,62 \
-        --medium 63-70 --full 71-78
+    python3 score_organ.py <song> <score_notes.json> <out.wav> --config organ_songs/<song>.json [--stems]
 
+The config holds the song's bar plan (tempo, vocal bars, 5/4 bars), the registration plan
+(which bars get which stops), any rhythms read by hand, a pedal line, a closing chord, and
+each part's room and level; see organ_songs/soldier_of_heaven.json.
 score_notes.json comes from score_read.py. The right-hand top line of the vocal bars
 is the melody. A studio track holds its click tempo exactly, so the score lands on the
 recording's drum-derived beat grid by a whole number of beats; each note then snaps
@@ -36,11 +37,13 @@ def ranges(spec):
 
 
 def score_events(bars, vocal, five, bpm):
-    """Melody (top RH note per onset) and all RH notes, in score seconds."""
+    """Melody (top RH note per onset), the RH chord under each melody note, all RH notes,
+    and each bar's start, in score seconds."""
     beat = 60.0 / bpm
-    t_bar, melody, allrh = 0.0, [], []
+    t_bar, melody, allrh, chords, starts = 0.0, [], [], [], {}
     for b in bars:
         nb = 5 if b['bar'] in five else 4
+        starts[b['bar']] = t_bar
         if b['bar'] in vocal:
             rh = [n for n in b['notes'] if n['staff'] == 'rh']
             filled_x = [n['x'] for n in rh if n['head'] == 'filled']
@@ -68,9 +71,11 @@ def score_events(bars, vocal, five, bpm):
                 e = t_bar + max(0.0, (nx - 0.06) / 0.91) * nb * beat
                 e = min(e, s + 1.5 * beat)
                 melody.append([s, e, top, b['bar']])
+                chords.append(sorted(set(all_)))
                 allrh.extend([s, e, m] for m in all_)
         t_bar += nb * beat
-    return melody, allrh, t_bar
+    starts[len(bars) + 1] = t_bar
+    return melody, allrh, chords, starts
 
 
 def beat_grid(drums_wav, bpm):
@@ -122,13 +127,16 @@ def slot_features(vocals_wav, pyin_cache, phase, slot, path):
     return CH, PC, ON, R
 
 
-def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True):
+def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True, fixed=None, starts=None):
     """Score and recording share an exact tempo, so the score maps onto the recording's
     beat grid by a whole number of beats (searched globally, per section only when a
     section clearly prefers another). Within a section each note then snaps to a 16th
     slot near its engraved position by dynamic programming over: the singer's onset
     strength, the sung pitch (pYIN, chroma) holding the note's pitch until the next
-    note, a mild preference for beats and 8ths, and distance from the engraved spot."""
+    note, a mild preference for beats and 8ths, and distance from the engraved spot.
+    fixed: {bar: [(16th slot in bar, length in 16ths), ...]} pins bars whose rhythm has been
+    read by hand (needs starts, the score's bar starts). Output notes carry their melody index."""
+    fixed = fixed or {}
     CH, PC, ON, R = feats
     CHn = CH / (CH.max(1, keepdims=True) + 1e-9)
     slot = beat / 4
@@ -146,11 +154,12 @@ def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True):
                                                           int(round(e / slot)) + 4 * k), m % 12)
                    for s, e, m, _ in notes)
 
+    index = {id(x): i for i, x in enumerate(melody)}
     secs = [[x for x in melody if lo <= x[3] <= hi] for lo, hi in sections]
     secs = [s for s in secs if s]
     ks = range(-8, 41)
     kg = max(ks, key=lambda k: sum(match(s, k) for s in secs))
-    out, report = [], []
+    out, report, pinned = [], [], set()
     for sec in secs:
         scores = {k: match(sec, k) for k in ks}
         kb = max(scores, key=scores.get)
@@ -159,6 +168,16 @@ def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True):
         p = [s / slot + 4 * k for s, _, _, _ in sec]
         pe = [e / slot + 4 * k for _, e, _, _ in sec]
         cand = [list(range(int(np.floor(x)) - window, int(np.ceil(x)) + window + 1)) for x in p]
+        for b in sorted({x[3] for x in sec} & set(fixed)):
+            idx = [i for i, x in enumerate(sec) if x[3] == b]
+            if len(idx) != len(fixed[b]):
+                print('  bar %d: %d notes read but %d rhythm slots given; left to the aligner'
+                      % (b, len(idx), len(fixed[b])))
+                continue
+            b0 = starts[b] / slot + 4 * k
+            for i, (sl, ln) in zip(idx, fixed[b]):
+                p[i], pe[i], cand[i] = b0 + sl, b0 + sl + ln, [int(round(b0 + sl))]
+                pinned.add(id(sec[i]))
         grid = lambda j: 0.35 if j % 4 == 0 else 0.15 if j % 2 == 0 else 0.0
         unary = [[1.2 * (ON[j] if 0 <= j < ns else 0) + grid(j) - 0.25 * abs(j - x) for j in c]
                  for c, x in zip(cand, p)]
@@ -191,9 +210,11 @@ def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True):
             end = pe[i] + shift
             if i + 1 < n:
                 end = min(max(end, j + 1), js[i + 1])
-            out.append([phase + j * slot, phase + max(j + 1, end) * slot, x[2], x[3]])
+            out.append([phase + j * slot, phase + max(j + 1, end) * slot, x[2], x[3], index[id(x)]])
     out.sort(key=lambda x: x[0])
     for i, x in enumerate(out if sustain else []):  # hold through the singer's sustain (ties across barlines aren't read)
+        if id(melody[x[4]]) in pinned:
+            continue
         nxt = out[i + 1][0] if i + 1 < len(out) else x[1] + 4 * beat
         j = int(round((x[1] - phase) / slot))
         while j < ns and phase + j * slot < min(nxt, x[1] + 2 * beat) and R[j] > 0.3:
@@ -216,7 +237,7 @@ def follow_singer(notes, sections, pyin_cache, min_voiced=30):
 
     def score(ns):
         tot = vox = 0
-        for s, e, m, _ in ns:
+        for s, e, m in (x[:3] for x in ns):
             seg = pc[int(s / 0.02):int(e / 0.02)]
             v = seg >= 0
             tot += np.sum(seg[v] == m % 12) - 0.3 * np.sum(seg[v] != m % 12)
@@ -236,7 +257,7 @@ def follow_singer(notes, sections, pyin_cache, min_voiced=30):
             base, vox = score(ns)
             if not ns or vox < min_voiced:
                 continue
-            r = {k: score([[s, e, scale_step(m, k, scale), bb] for s, e, m, bb in ns])[0]
+            r = {k: score([[x[0], x[1], scale_step(x[2], k, scale)] for x in ns])[0]
                  for k in (-3, -2, -1, 1, 2, 3)}
             k = max(r, key=r.get)
             if r[k] - base > max(15, 0.5 * abs(base)):
@@ -253,14 +274,15 @@ def scale_step(m, k, scale):
     return 12 * (o + i // 7) + scale[i % 7]
 
 
-def render(notes, stacks, sf2, swell):
+def render(notes, stacks, sf2, swell, length):
+    """notes: (start, end, midi, stack name). Every rank of every stack gets its own channel."""
     import tinysoundfont
     syn = tinysoundfont.Synth(samplerate=SR, gain=-8)
     sfid = syn.sfload(sf2)
     chans, ch = {}, 0
     for name, stack in stacks.items():
         for i, (bank, preset, _, _) in enumerate(stack):
-            if ch == 9:
+            if ch == 9:  # GM drum channel
                 ch += 1
             syn.program_select(ch, sfid, bank, preset)
             syn.control_change(ch, 7, 112)
@@ -293,8 +315,46 @@ def render(notes, stacks, sf2, swell):
         else:
             syn.control_change(c, k, v)
     syn.notes_off()
-    chunks.append(np.frombuffer(syn.generate(int(2 * SR)), np.float32).copy())
-    return np.concatenate(chunks).reshape(-1, 2).T
+    n = max(int(2 * SR), int(round((length - t) * SR)))
+    chunks.append(np.frombuffer(syn.generate(n), np.float32).copy())
+    x = np.concatenate(chunks).reshape(-1, 2).T
+    return x[:, :int(length * SR)]
+
+
+def limit(x, ceiling=0.97, lookahead=0.005, release=0.15):
+    """Look-ahead peak limiter: gain falls over a few ms just before a peak and recovers
+    exponentially, so sustained organ chords don't pump on every drum hit."""
+    from scipy.ndimage import maximum_filter1d, minimum_filter1d, uniform_filter1d
+    blk = int(SR / 1000)  # 1 ms control rate
+    nb = x.shape[1] // blk + 1
+    env = np.abs(x).max(0)
+    env = np.pad(env, (0, nb * blk - len(env))).reshape(nb, blk).max(1)
+    la = max(1, int(lookahead * 1000))
+    env = maximum_filter1d(env, 2 * la + 1, origin=-la)  # sees peaks coming
+    target = np.minimum(1.0, ceiling / np.maximum(env, 1e-9))
+    g = np.empty(nb)
+    r = 1 - np.exp(-0.001 / release)
+    prev = 1.0
+    for k in range(nb):
+        prev = min(target[k], prev + (1 - prev) * r)
+        g[k] = prev
+    g = uniform_filter1d(minimum_filter1d(g, la, origin=-(la // 2)), la)
+    gs = np.interp(np.arange(x.shape[1]), np.arange(nb) * blk + blk / 2, g)
+    return np.clip(x * gs, -ceiling, ceiling)
+
+
+def note_midi(name):
+    letters = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}
+    m = letters[name[0]]
+    rest = name[1:]
+    while rest and rest[0] in 'b#':
+        m += -1 if rest[0] == 'b' else 1
+        rest = rest[1:]
+    return 12 * (int(rest) + 1) + m
+
+
+def bar_set(spec):
+    return ranges(str(spec))
 
 
 def main():
@@ -303,80 +363,145 @@ def main():
     ap.add_argument('song')
     ap.add_argument('score')
     ap.add_argument('out')
-    ap.add_argument('--bpm', type=float, required=True)
-    ap.add_argument('--vocal-bars', required=True)
+    ap.add_argument('--config', help='song JSON: bars, registration plan, hand-read rhythms, pedal, final chord')
+    ap.add_argument('--bpm', type=float)
+    ap.add_argument('--vocal-bars')
     ap.add_argument('--five-four', default='')
-    ap.add_argument('--medium', default='', help='bars that get a fuller registration')
-    ap.add_argument('--full', default='', help='bars that get all the stops')
     ap.add_argument('--sections', default='', help='alignment sections (default: the vocal-bar ranges)')
     ap.add_argument('--transpose', type=int, default=0)
     ap.add_argument('--no-follow-singer', dest='follow_singer', action='store_false',
                     help='play the arrangement as written even where the singer sings other notes')
     ap.add_argument('--lead', type=float, default=0.02, help='start organ notes this early (pipe attack)')
-    ap.add_argument('--organ-db', type=float, default=1.0)
+    ap.add_argument('--organ-db', type=float, default=1.0, help='organ level vs. the original vocal')
     ap.add_argument('--sf2', default=organ.SF2)
+    ap.add_argument('--stems', action='store_true', help='also write the organ and the backing on their own')
     a = ap.parse_args()
+    cfg = json.load(open(a.config)) if a.config else {}
+    for k in ('bpm', 'vocal_bars', 'five_four', 'sections'):
+        if k in cfg and not getattr(a, k):
+            setattr(a, k, cfg[k])
+    if not a.bpm or not a.vocal_bars:
+        ap.error('--bpm and --vocal-bars (or a --config with them) are required')
 
     h = hashlib.sha1(open(a.song, 'rb').read()).hexdigest()[:12]
     cache = os.path.join(organ.CACHE, h)
     os.makedirs(cache, exist_ok=True)
     stems = organ.separate(a.song, cache)
     bars = json.load(open(a.score))
-    melody, allrh, score_len = score_events(bars, ranges(a.vocal_bars), ranges(a.five_four), a.bpm)
+    melody, allrh, chords, starts = score_events(bars, ranges(a.vocal_bars), ranges(a.five_four), a.bpm)
     secs = []
-    for part in filter(None, a.vocal_bars.split(',')):
+    for part in filter(None, (a.sections or a.vocal_bars).split(',')):
         lo, _, hi = part.partition('-')
         secs.append((int(lo), int(hi or lo)))
-    if a.sections:
-        secs = []
-        for part in filter(None, a.sections.split(',')):
-            lo, _, hi = part.partition('-')
-            secs.append((int(lo), int(hi or lo)))
+    fixed = {}
+    for spec, slots in cfg.get('rhythm', {}).items():
+        for b in bar_set(spec):
+            fixed[b] = [tuple(s) for s in slots]
     beat = 60 / a.bpm
     phase = beat_grid(stems['drums'], a.bpm)
     feats = slot_features(stems['vocals'], os.path.join(cache, 'pyin_f0.npy'), phase, beat / 4,
                           os.path.join(cache, 'slotfeat.npz'))
-    aligned, kg, report = align_grid(melody, secs, feats, phase, beat)
+    grid = lambda **kw: align_grid(melody, secs, feats, phase, beat, fixed=fixed, starts=starts, **kw)
+    aligned, kg, report = grid()
     changed = []
     if a.follow_singer:  # fix bars the arrangement harmonises, then re-snap them with the right pitches
-        rough, _, _ = align_grid(melody, secs, feats, phase, beat, sustain=False)
+        rough, _, _ = grid(sustain=False)
         changed = follow_singer(rough, secs, os.path.join(cache, 'pyin_f0.npy'))
         for b, k, scale in changed:
             for x in melody:
                 if x[3] == b:
                     x[2] = scale_step(x[2], k, scale)
         if changed:
-            aligned, kg, report = align_grid(melody, secs, feats, phase, beat)
-    aligned = [[s - a.lead, e - a.lead, p, bar] for s, e, p, bar in aligned]
+            aligned, kg, report = grid()
     print('beat grid phase %.3f s, score -> recording offset %d beats' % (phase, kg))
     for lo, hi, k, kb in report:
         print('  bars %d-%d: offset %d beats (section alone prefers %d)' % (lo, hi, k, kb))
     for b, k, _ in changed:
         print('  bar %d: arrangement differs from the singer, melody moved %+d scale steps' % (b, k))
-    med, full = ranges(a.medium), ranges(a.full)
-    notes = [(s, e, p + a.transpose, 'full' if bar in full else 'medium' if bar in med else 'simple')
-             for s, e, p, bar in aligned]
+    bar_time = lambda b, beats=0.0: phase + (starts[b] / beat + kg + beats) * beat  # recording time
+
+    # registration plan: [[bars, stack name], ...]; stacks: built-ins or the config's own
     stacks = {'simple': organ_vocal.SIMPLE, 'medium': MEDIUM, 'full': organ_vocal.FULL}
-    swell = organ_vocal.expression(stems['vocals'], [(s, e, p, 1) for s, e, p, _ in notes])
-    x = organ.cathedral(render(notes, stacks, a.sf2, swell), rt60=1.8, wet=0.25, hp=250.0)
+    stacks.update({k: [tuple(r) for r in v] for k, v in cfg.get('stacks', {}).items()})
+    plan = [(bar_set(b), name) for b, name in cfg.get('registration', [])]
+    reg_of = lambda bar: next((name for bs, name in plan if bar in bs), 'simple')
+    shifted = {b for b, _, _ in changed}
+    chord_bars = bar_set(cfg.get('chords', '')) - shifted
+    notes = []
+    for s, e, p, bar, i in aligned:
+        s, e, r = s - a.lead, e - a.lead, reg_of(bar)
+        notes.append((s, e, p + a.transpose, r))
+        if bar in chord_bars:  # the arranger's chord under the tune, on lighter ranks
+            notes += [(s, e, c + a.transpose, 'chord') for c in chords[i] if c < p and (p - c) % 12]
+    pedal = cfg.get('pedal', {})
+    pev = sorted((bar_time(int(b), bt) - a.lead, note_midi(nm), int(b)) for b, evs in pedal.items() for bt, nm in evs)
+    fc = cfg.get('final_chord')
+    end_t, final_notes = None, []
+    if fc:
+        t0 = bar_time(fc['bar']) - a.lead
+        end_t = fc['release']
+        r = reg_of(fc['bar'])
+        final_notes = [(t0, end_t, note_midi(nm) + a.transpose, r) for nm in fc['notes']]
+        if fc.get('pedal'):
+            final_notes.append((t0, end_t, note_midi(fc['pedal']) + a.transpose, 'pedal'))
+    for j, (t, m, b) in enumerate(pev):
+        e = pev[j + 1][0] - 0.01 if j + 1 < len(pev) else (
+            bar_time(fc['bar']) - a.lead - 0.01 if fc else bar_time(b + 1) - a.lead - 0.01)
+        notes.append((t, e, m + a.transpose, 'pedal'))
+    notes.sort()
+
+    # swell follows the singer, with a floor per bar range (flat out in the big sections)
+    swell = organ_vocal.expression(stems['vocals'], [(s, e, p, 1) for s, e, p, r in notes if r not in ('chord', 'pedal')])
+    floors = [(bar_time(min(bar_set(b))), bar_time(max(bar_set(b)) + 1), v) for b, v in cfg.get('swell_floor', [])]
+    if fc:
+        floors.append((bar_time(fc['bar']), end_t + 1, 127))
+    swell = [(t, max([v] + [fv for t0, t1, fv in floors if t0 <= t < t1])) for t, v in swell]
 
     backing = sum(organ.load_stereo(stems[k]) for k in ('drums', 'bass', 'other'))
     vocal = organ.load_stereo(stems['vocals'])
-    n = min(backing.shape[1], x.shape[1], vocal.shape[1])
-    voiced = np.zeros(n, bool)
-    for s, e, _, _ in notes:
-        voiced[int(s * SR):min(n, int(e * SR))] = True
-    rms = lambda z: np.sqrt(np.mean(z[:, :n][:, voiced] ** 2)) + 1e-9
-    g = rms(vocal) / rms(x) * 10 ** (a.organ_db / 20)
-    mix = backing[:, :n] + x[:, :n] * g
-    peak = np.max(np.abs(mix))
-    if peak > 0.95:
-        mix = np.tanh(mix / peak * 1.6) / np.tanh(1.6) * 0.95
+    n = min(backing.shape[1], vocal.shape[1])
+    length = n / SR
+
+    # each part of the song gets its own room and level: the organ's RMS over the sung notes
+    # matches the singer's there, plus that part's boost
+    parts = cfg.get('parts', [{'bars': '1-999', 'reverb': [1.8, 0.25, 250.0], 'boost_db': 0}])
+    organ_x = np.zeros((2, n), np.float32)
+    for part in parts:
+        bs = bar_set(part['bars'])
+        t0, t1 = bar_time(min(bs)) - 0.3, bar_time(min(max(bs) + 1, max(starts))) - 0.3
+        if fc and fc['bar'] in bs:
+            t1 = length
+        sel = [x for x in notes if t0 <= x[0] < t1]
+        if not sel:
+            continue
+        dry = render(sel, stacks, a.sf2, swell, length)
+        if fc and fc['bar'] in bs:  # the closing chord, levelled on its own so it crowns the band, not crushes it
+            dry += render(final_notes, stacks, a.sf2, swell, length) * 10 ** (fc.get('gain_db', 0) / 20)
+        from scipy.signal import butter, sosfiltfilt
+        dry = sosfiltfilt(butter(2, 25, 'highpass', fs=SR, output='sos'), dry, axis=1)  # sample DC, rumble
+        rt, wet, hp = part['reverb']
+        x = organ.cathedral(dry, rt60=rt, wet=wet, hp=hp)
+        voiced = np.zeros(n, bool)
+        for s, e, _, r in sel:
+            if r not in ('chord', 'pedal') and (not fc or s < bar_time(fc['bar']) - 0.1):
+                voiced[int(s * SR):min(n, int(e * SR))] = True
+        rms = lambda z: np.sqrt(np.mean(z[:, :n][:, voiced] ** 2)) + 1e-9
+        g = rms(vocal) / rms(x) * 10 ** ((a.organ_db + part.get('boost_db', 0)) / 20)
+        organ_x += x[:, :n] * g
+        print('  bars %s: reverb %.1f s, organ %+.1f dB vs. the vocal' % (part['bars'], rt, a.organ_db + part.get('boost_db', 0)))
+    mix = backing[:, :n] + organ_x
+    if a.stems:  # the organ alone and the backing alone, at the mix's scale, for video editing
+        import soundfile as sf
+        sf.write(a.out[:-4] + '.organ.wav', organ_x.T, SR, subtype='FLOAT')
+        sf.write(a.out[:-4] + '.backing.wav', backing[:, :n].T, SR, subtype='FLOAT')
+    pk = np.abs(mix).max(0)
+    w = SR // 2
+    loud = sorted(((pk[i:i + w].max(), i / SR) for i in range(0, n - w, w)), reverse=True)[:5]
+    print('  limiter: loudest peaks %s' % ', '.join('%+.1f dB at %.1f s' % (20 * np.log10(v / 0.97), t) for v, t in loud))
+    mix = limit(mix * 10 ** (cfg.get('master_db', 0) / 20))
     organ.write_wav(a.out, mix)
-    json.dump([dict(start=s, end=e, midi=p, reg=r) for s, e, p, r in notes], open(a.out + '.notes.json', 'w'))
-    first = {r: min((s for s, _, _, rr in notes if rr == r), default=None) for r in stacks}
-    print('melody notes %d  registration starts %s  -> %s'
-          % (len(notes), {k: (round(v, 1) if v else None) for k, v in first.items()}, a.out))
+    json.dump([dict(start=s, end=e, midi=int(p), reg=r) for s, e, p, r in notes + final_notes], open(a.out + '.notes.json', 'w'))
+    print('notes %d (melody %d)  -> %s' % (len(notes), len(aligned), a.out))
 
 
 if __name__ == '__main__':

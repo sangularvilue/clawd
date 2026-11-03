@@ -10,7 +10,11 @@ so an edit re-times itself to whatever song it's given.
 - `audio.py`: song analysis (tempo, beat grid, loudest windows) and a
   placeholder drum track. Run `python3 audio.py song.mp3 30` for the loudest 30 s windows
 - `render.py`: renders an edit list. Shots can be generated (`shot=`), video (`clip=`, `in=`, `speed=`)
-  or stills (`photo=`, `zoom=`)
+  or stills (`photo=`, `zoom=`). Sound bites: `voice=True` on a clip. Speeches across many shots:
+  `VOICEOVER = [dict(file=, at=<beat>, src_in=, dur=, gain=, duck=)]`; a speech pre-roll before the
+  song comes in: `MUSIC_IN = <beats>` (SONG_START is the song time of that beat)
+- `score_organ.py`, `vocal_organ.py`, `organ_songs/`: a song's vocal line on pipe organ over its own
+  backing (from sheet music, or transcribed from the singer when there's none)
 - `edits/`: edit lists
 
 ```

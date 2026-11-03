@@ -130,36 +130,58 @@ def main():
     os.makedirs(os.path.dirname(out), exist_ok=True)
 
     wav = out + '.wav'
+    # MUSIC_IN (beats): the song comes in at this beat of the edit (SONG_START is the song time
+    # of that beat); before it the edit is silent apart from voiceovers, e.g. a speech pre-roll
+    music_in = getattr(E, 'MUSIC_IN', 0.0) if a.song else 0.0
     if a.song:
-        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', str(a.start + b0 * beat), '-i', a.song, '-t', str(dur),
-                        '-af', 'afade=t=out:st=%f:d=0.6' % max(0, dur - 0.6), '-ar', '44100', '-ac', '2', wav],
-                       check=True)
+        pre = max(0.0, music_in - b0) * beat
+        ss = a.start + max(0.0, b0 - music_in) * beat
+        af = 'afade=t=out:st=%f:d=0.6' % max(0, dur - pre - 0.6)
+        if pre > 0:
+            af += ',adelay=%d|%d' % (int(pre * 1000), int(pre * 1000))
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', str(ss), '-i', a.song, '-t', str(max(0.1, dur - pre)),
+                        '-af', af + ',apad', '-t', str(dur), '-ar', '44100', '-ac', '2', wav], check=True)
     else:
         braams = [(starts[i] - b0) * beat for i, s in enumerate(seq) if s.get('braam') and b0 <= starts[i] < b1]
         scr = [(starts[i] - b0 + s.get('screech')) * beat for i, s in enumerate(seq)
                if s.get('screech') is not None and b0 <= starts[i] < b1]
         audio.drums(bpm, dur, wav, braams=braams, screech=scr[0] if scr else None)
 
-    # sound bites: clips marked voice=True play their own audio over the song, which ducks underneath
-    voices = [(i, s) for i, s in enumerate(seq) if s.get('voice') and 'clip' in s and b0 <= starts[i] < b1]
-    if voices:
+    # Voices over the music, which ducks underneath each one:
+    #  - sound bites: clips marked voice=True play their own audio during their shot
+    #    (voice_tail= lets the line finish past the cut, voice_gain=, duck=)
+    #  - VOICEOVER: speeches and monologues that run across any number of shots, e.g.
+    #    VOICEOVER = [dict(file='media/w1109_speech.m4a', at=0, src_in=12.3, dur=6.5, gain=1.4, duck=0.25)]
+    #    (at in beats of the edit, src_in/dur in seconds of the source)
+    items = []
+    for i, s in enumerate(seq):
+        if s.get('voice') and 'clip' in s and b0 <= starts[i] < b1:
+            spd = s.get('speed', 1.0)
+            items.append(dict(file=s['clip'], src_in=s.get('in', 0.0), t0=(starts[i] - b0) * beat,
+                              dur=s['beats'] * beat + s.get('voice_tail', 0.0), speed=spd,
+                              gain=s.get('voice_gain', 1.6), duck=s.get('duck', 0.3)))
+    for v in getattr(E, 'VOICEOVER', []):
+        t0 = (v['at'] - b0) * beat
+        if t0 + v['dur'] > 0 and t0 < dur:
+            items.append(dict(file=v['file'], src_in=v.get('src_in', 0.0) + max(0.0, -t0), t0=max(0.0, t0),
+                              dur=v['dur'] - max(0.0, -t0), speed=v.get('speed', 1.0), gain=v.get('gain', 1.4),
+                              duck=v.get('duck', 0.25)))
+    if items:
         mixed = out + '.mix.wav'
         cmd = ['ffmpeg', '-v', 'error', '-y', '-i', wav]
-        parts, duck = [], []
-        for j, (i, s) in enumerate(voices):
-            t0 = (starts[i] - b0) * beat
-            vlen = s['beats'] * beat + s.get('voice_tail', 0.0)
-            spd = s.get('speed', 1.0)
-            cmd += ['-ss', str(s.get('in', 0.0)), '-t', str(vlen * spd), '-i', os.path.join(HERE, s['clip'])]
+        parts, duck = [], '1'
+        for j, v in enumerate(items):
+            spd = v['speed']
+            cmd += ['-ss', str(v['src_in']), '-t', str(v['dur'] * spd), '-i', os.path.join(HERE, v['file'])]
             tempo = 'atempo=%f,' % spd if abs(spd - 1) > 1e-3 and 0.5 <= spd <= 2 else ''
-            ms = int(t0 * 1000)
+            ms = int(v['t0'] * 1000)
             parts.append('[%d:a]%saresample=44100,aformat=channel_layouts=stereo,volume=%f,'
-                         'afade=t=out:st=%f:d=0.08,adelay=%d|%d[v%d]'
-                         % (j + 1, tempo, s.get('voice_gain', 1.6), max(0.0, vlen - 0.08), ms, ms, j))
-            duck.append('between(t,%f,%f)' % (t0 - 0.05, t0 + vlen + 0.05))
-        song = "[0:a]volume='if(%s,%f,1)':eval=frame[s]" % ('+'.join(duck), s.get('duck', 0.3))
-        mix = '[s]' + ''.join('[v%d]' % j for j in range(len(voices)))
-        fc = ';'.join([song] + parts) + ';' + mix + 'amix=inputs=%d:normalize=0:duration=first[out]' % (len(voices) + 1)
+                         'afade=t=in:d=0.02,afade=t=out:st=%f:d=0.08,adelay=%d|%d[v%d]'
+                         % (j + 1, tempo, v['gain'], max(0.0, v['dur'] - 0.08), ms, ms, j))
+            duck = 'if(between(t,%f,%f),%f,%s)' % (v['t0'] - 0.08, v['t0'] + v['dur'] + 0.12, v['duck'], duck)
+        song = "[0:a]volume='%s':eval=frame[s]" % duck
+        mix = '[s]' + ''.join('[v%d]' % j for j in range(len(items)))
+        fc = ';'.join([song] + parts) + ';' + mix + 'amix=inputs=%d:normalize=0:duration=first[out]' % (len(items) + 1)
         subprocess.run(cmd + ['-filter_complex', fc, '-map', '[out]', '-ar', '44100', '-ac', '2', mixed], check=True)
         os.replace(mixed, wav)
 

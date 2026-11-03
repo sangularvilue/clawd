@@ -121,6 +121,39 @@ def monophonic(notes, min_dur=0.09):
     return fixed
 
 
+def melody_from_f0(vocals, cache_json, min_note=0.08):
+    """Melody from a pYIN pitch track of the isolated vocal, split into notes at
+    syllable onsets and at pitch changes, so repeated notes stay separate."""
+    if os.path.exists(cache_json):
+        return [tuple(n) for n in json.load(open(cache_json))]
+    import librosa
+    sr, hop = 16000, 256
+    y, _ = librosa.load(vocals, sr=sr, mono=True)
+    f0, vflag, vprob = librosa.pyin(y, fmin=80, fmax=1000, sr=sr, frame_length=2048, hop_length=hop)
+    t = librosa.times_like(f0, sr=sr, hop_length=hop)
+    on = librosa.onset.onset_detect(y=y, sr=sr, hop_length=hop, units='frames', backtrack=True, delta=0.08)
+    onset = np.zeros(len(f0), bool)
+    onset[on[on < len(f0)]] = True
+    midi = np.where(vflag, librosa.hz_to_midi(np.nan_to_num(f0, nan=1.0)), np.nan)
+    rms = librosa.feature.rms(y=y, frame_length=2048, hop_length=hop)[0][:len(f0)]
+    loud = rms > np.percentile(rms[vflag], 15) if vflag.any() else rms > 0
+    notes, cur = [], None
+    for i in range(len(f0)):
+        v = vflag[i] and loud[i] and not np.isnan(midi[i])
+        p = int(round(midi[i])) if v else None
+        if cur is not None and (not v or onset[i] or abs(p - cur[2]) >= 1 and
+                                np.nanmedian(midi[i:i + 5]) is not None and
+                                abs(round(float(np.nanmedian(midi[i:i + 5]))) - cur[2]) >= 1):
+            if t[i] - cur[0] >= min_note:
+                seg = midi[cur[3]:i]
+                notes.append((float(cur[0]), float(t[i]), int(round(float(np.nanmedian(seg)))), 1.0))
+            cur = None
+        if v and cur is None:
+            cur = [t[i], None, p, i]
+    json.dump(notes, open(cache_json, 'w'))
+    return notes
+
+
 # ---------------------------------------------------------------- 3. chords
 
 TEMPL = []
@@ -345,7 +378,10 @@ def main():
     beat_times = np.arange(phase, full, beat)
     step = beat / 4
 
-    mel = monophonic(transcribe(stems['vocals'], os.path.join(cache, 'vocals.json'), 80, 1100, 0.5, 0.3, 110))
+    mel_f0 = melody_from_f0(stems['vocals'], os.path.join(cache, 'vocals_f0.json'))
+    mel_bp = transcribe(stems['vocals'], os.path.join(cache, 'vocals.json'), 80, 1100, 0.5, 0.3, 110)
+    fill = [n for n in mel_bp if not any(m[0] < n[1] and n[0] < m[1] for m in mel_f0)]
+    mel = monophonic(mel_f0 + fill, 0.08)
     bas = monophonic(transcribe(stems['bass'], os.path.join(cache, 'bass.json'), 30, 330, 0.45, 0.3, 120), 0.12)
     segs, (tonic, mode) = chords(stems, beat_times)
 

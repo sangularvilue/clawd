@@ -5,9 +5,11 @@
         --medium 63-70 --full 71-78
 
 score_notes.json comes from score_read.py. The right-hand top line of the vocal bars
-is the melody. Score time is aligned to the isolated vocal (Demucs stem) with DTW on
-chroma (right-hand notes vs. the vocal), so every written note lands where it is
-actually sung, even in choir passages where pitch tracking fails.
+is the melody. A studio track holds its click tempo exactly, so the score lands on the
+recording's drum-derived beat grid by a whole number of beats; each note then snaps
+to the 16th where the singer actually starts it (vocal-stem onsets and pitch), and bars
+where the arrangement plainly harmonises instead of doubling the singer are moved
+onto the sung notes. Every written note is played once: nothing dropped, nothing extra.
 """
 import argparse
 import hashlib
@@ -71,151 +73,184 @@ def score_events(bars, vocal, five, bpm):
     return melody, allrh, t_bar
 
 
-def align(melody, allrh, score_len, vocals_wav, hop=0.04, pyin_cache=None):
-    """Map score time -> audio time with DTW. The cost uses the singer's pYIN pitch where it
-    is clean (lead vocal) and vocal-stem chroma elsewhere (choir), then each note is nudged
-    onto the nearby stretch where its pitch is actually sung."""
+def beat_grid(drums_wav, bpm):
+    """Phase of a fixed-tempo beat grid (studio recordings to a click hold tempo exactly)."""
+    import librosa
+    y, sr = librosa.load(drums_wav, sr=22050)
+    env = librosa.onset.onset_strength(y=y, sr=sr, hop_length=220)
+    fps = sr / 220
+    per = 60.0 / bpm
+    def strength(ph):
+        idx = np.round((ph + np.arange(0, len(env) / fps - ph, per)) * fps).astype(int)
+        return env[idx[idx < len(env)]].mean()
+    best = max((strength(ph), ph) for ph in np.arange(0, per, 0.005))
+    return best[1]
+
+
+def slot_features(vocals_wav, pyin_cache, phase, slot, path):
+    """Per-16th-note features of the vocal stem: chroma, pYIN pitch-class share, onset
+    strength at the slot start, loudness."""
+    if os.path.exists(path):
+        z = np.load(path)
+        if 'phase' in z and abs(float(z['phase']) - phase) < 1e-6 and abs(float(z['slot']) - slot) < 1e-9:
+            return z['CH'], z['PC'], z['ON'], z['R']
     import librosa
     y, sr = librosa.load(vocals_wav, sr=22050)
-    h = int(hop * sr)
-    A = librosa.feature.chroma_cqt(y=y, sr=sr, hop_length=h)
-    na = A.shape[1]
-    rms = librosa.feature.rms(y=y, frame_length=2048, hop_length=h)[0][:na]
-    voiced_a = rms > np.percentile(rms, 35)
-    if pyin_cache and os.path.exists(pyin_cache):
-        f0, vflag, vprob = np.load(pyin_cache)
-        pt = np.arange(len(f0)) * 0.02
-    else:
-        y16 = librosa.resample(y, orig_sr=sr, target_sr=16000)
-        f0, vflag, vprob = librosa.pyin(y16, fmin=80, fmax=1000, sr=16000, frame_length=2048, hop_length=320)
-        pt = np.arange(len(f0)) * 0.02
-    at = np.arange(na) * hop
-    pm = np.interp(at, pt, np.where(vflag > 0, 69 + 12 * np.log2(np.nan_to_num(f0, nan=440) / 440), -1))
-    pv = np.interp(at, pt, (vflag > 0).astype(float)) > 0.5
-    ns = int(score_len / hop) + 1
-    S = np.zeros((12, ns))
-    sp = np.full(ns, -1)
-    for s, e, m in allrh:
-        S[m % 12, int(s / hop):int(e / hop) + 1] += 0.5
-    for s, e, m, _ in melody:
-        S[m % 12, int(s / hop):int(e / hop) + 1] += 1.0
-        sp[int(s / hop):int(e / hop) + 1] = m % 12
-    voiced_s = S.sum(0) > 0
-    Sn = S / (np.linalg.norm(S, axis=0, keepdims=True) + 1e-9)
-    An = A / (np.linalg.norm(A, axis=0, keepdims=True) + 1e-9)
-    Cc = 1 - Sn.T @ An
-    d = np.abs(sp[:, None] - np.round(pm)[None, :] % 12)
-    d = np.minimum(d, 12 - d)
-    Cp = np.clip(d / 2.0, 0, 1)
-    use_p = (sp[:, None] >= 0) & pv[None, :]
-    C = np.where(use_p, 0.7 * Cp + 0.3 * Cc, Cc)
-    C[~voiced_s] = 0.9
-    C[:, ~voiced_a] = 0.9
-    C[np.ix_(~voiced_s, ~voiced_a)] = 0.1
-    D, wp = librosa.sequence.dtw(C=C.astype(np.float32), step_sizes_sigma=np.array([[1, 1], [0, 1], [1, 0]]),
-                                 weights_add=np.array([0, 0.12, 0.12]))
-    cost = float(np.mean(C[wp[:, 0], wp[:, 1]]))
-    wp = wp[::-1]
-    smap = np.full(ns, np.nan)
-    for i, j in wp:
-        smap[i] = j * hop if np.isnan(smap[i]) else min(smap[i], j * hop)
-    idx = np.arange(ns)
-    ok = ~np.isnan(smap)
-    smap = np.maximum.accumulate(np.interp(idx, idx[ok], smap[ok]))
-    out = []
-    for s, e, m, bar in melody:
-        out.append([float(np.interp(s / hop, idx, smap)), float(np.interp(e / hop, idx, smap)), m, bar])
-    # nudge: start each note where its pitch class first holds for 60 ms near the aligned onset
-    sung_pc = np.where(pv, np.round(pm) % 12, -1)
-    run = int(0.06 / hop)
-    prev_end = 0.0
-    for n in out:
-        lo = max(prev_end - hop, n[0] - 0.25)
-        hi = n[0] + 0.25
-        best = None
-        for j in range(int(lo / hop), int(hi / hop)):
-            if 0 <= j < na - run and all(sung_pc[j:j + run] == n[2] % 12):
-                if best is None or abs(j * hop - n[0]) < abs(best - n[0]):
-                    best = j * hop
-        if best is not None:
-            shift = best - n[0]
-            n[0] = best
-            n[1] = max(n[0] + 0.08, n[1] + shift * 0.5)
-        prev_end = n[0] + 0.05
-    for i in range(len(out) - 1):  # legato, no overlaps
-        if out[i + 1][0] > out[i][0]:
-            out[i][1] = min(max(out[i][1], out[i][0] + 0.08), out[i + 1][0] - 0.005)
-    return out, cost
+    hop = 220
+    fps = sr / hop
+    ch = librosa.feature.chroma_cqt(y=y, sr=sr, hop_length=hop)
+    on = librosa.onset.onset_strength(y=y, sr=sr, hop_length=hop)
+    rms = librosa.feature.rms(y=y, frame_length=2048, hop_length=hop)[0]
+    f0, vflag, _ = np.load(pyin_cache)
+    pm = np.where(vflag > 0, 69 + 12 * np.log2(np.nan_to_num(f0, nan=440) / 440), np.nan)
+    ns = int((len(y) / sr - phase) / slot)
+    CH, PC, ON, R = np.zeros((ns, 12)), np.zeros((ns, 12)), np.zeros(ns), np.zeros(ns)
+    for j in range(ns):
+        t0 = phase + j * slot
+        a, b = int(t0 * fps), int((t0 + slot) * fps)
+        CH[j] = ch[:, a:b].mean(1)
+        R[j] = rms[a:b].mean()
+        ON[j] = on[max(0, a - 3):a + 4].max()
+        seg = pm[int(t0 / 0.02):int((t0 + slot) / 0.02)]
+        seg = seg[~np.isnan(seg)]
+        for x in seg:
+            PC[j, int(round(x)) % 12] += 1
+        PC[j] /= max(1.0, slot / 0.02)
+    ON /= np.percentile(ON, 99)
+    R /= np.percentile(R, 95)
+    np.savez(path, CH=CH, PC=PC, ON=ON, R=R, phase=phase, slot=slot)
+    return CH, PC, ON, R
 
 
-def align_sections(melody, allrh, sections, vocals_wav, pyin_cache, beat):
-    """Score and recording share a tempo, so each vocal section only needs a time offset:
-    slide the section's notes along the singer's pitch track (pYIN where clean, vocal-stem
-    chroma for choir passages) to the best match, keep sections in order, then refine
-    each 2-bar block by up to +-0.5 s and nudge each note onto its sung pitch."""
-    import librosa
-    hop = 0.02
-    f0, vflag, vprob = np.load(pyin_cache)
-    pc = np.where(vflag > 0, np.round(69 + 12 * np.log2(np.nan_to_num(f0, nan=440) / 440)) % 12, -1).astype(int)
-    y, sr = librosa.load(vocals_wav, sr=22050)
-    A = librosa.feature.chroma_cqt(y=y, sr=sr, hop_length=int(hop * sr))[:, :len(pc)]
-    A = A / (A.sum(0, keepdims=True) + 1e-9)
-    n = min(len(pc), A.shape[1])
-    pc, A = pc[:n], A[:, :n]
+def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True):
+    """Score and recording share an exact tempo, so the score maps onto the recording's
+    beat grid by a whole number of beats (searched globally, per section only when a
+    section clearly prefers another). Within a section each note then snaps to a 16th
+    slot near its engraved position by dynamic programming over: the singer's onset
+    strength, the sung pitch (pYIN, chroma) holding the note's pitch until the next
+    note, a mild preference for beats and 8ths, and distance from the engraved spot."""
+    CH, PC, ON, R = feats
+    CHn = CH / (CH.max(1, keepdims=True) + 1e-9)
+    slot = beat / 4
+    ns = len(R)
 
-    def match(notes, off):
-        tot = 0.0
-        for s, e, m, _ in notes:
-            a, b = int((s + off) / hop), int((e + off) / hop)
-            a, b = max(0, a), min(n, max(a + 1, b))
-            if b <= a:
-                tot -= 1
-                continue
-            seg = pc[a:b]
+    def fit(j0, j1, pc):  # how well slots j0..j1-1 carry pitch class pc
+        if j1 <= j0 or j0 < 0 or j1 > ns:
+            return -3.0
+        p = PC[j0:j1]
+        return float(np.sum(2 * p[:, pc] - 0.6 * (p.sum(1) - p[:, pc]) + 0.8 * CHn[j0:j1, pc] - 0.3
+                            + 0.5 * np.minimum(R[j0:j1], 1)))
+
+    def match(notes, k):
+        return sum(fit(int(round(s / slot)) + 4 * k, max(int(round(s / slot)) + 4 * k + 1,
+                                                          int(round(e / slot)) + 4 * k), m % 12)
+                   for s, e, m, _ in notes)
+
+    secs = [[x for x in melody if lo <= x[3] <= hi] for lo, hi in sections]
+    secs = [s for s in secs if s]
+    ks = range(-8, 41)
+    kg = max(ks, key=lambda k: sum(match(s, k) for s in secs))
+    out, report = [], []
+    for sec in secs:
+        scores = {k: match(sec, k) for k in ks}
+        kb = max(scores, key=scores.get)
+        k = kb if scores[kb] > 1.25 * max(scores[kg], 1e-9) else kg
+        report.append((sec[0][3], sec[-1][3], k, kb))
+        p = [s / slot + 4 * k for s, _, _, _ in sec]
+        pe = [e / slot + 4 * k for _, e, _, _ in sec]
+        cand = [list(range(int(np.floor(x)) - window, int(np.ceil(x)) + window + 1)) for x in p]
+        grid = lambda j: 0.35 if j % 4 == 0 else 0.15 if j % 2 == 0 else 0.0
+        unary = [[1.2 * (ON[j] if 0 <= j < ns else 0) + grid(j) - 0.25 * abs(j - x) for j in c]
+                 for c, x in zip(cand, p)]
+        n = len(sec)
+        best = [np.array(unary[0])]
+        back = []
+        for i in range(1, n):
+            cur, bk = [], []
+            for jb, b in enumerate(cand[i]):
+                opts = [(best[i - 1][ja] + 0.5 * fit(a, b, sec[i - 1][2] % 12), ja)
+                        for ja, a in enumerate(cand[i - 1]) if a < b]
+                if not opts:
+                    cur.append(-1e9)
+                    bk.append(0)
+                    continue
+                v, ja = max(opts)
+                cur.append(v + unary[i][jb])
+                bk.append(ja)
+            best.append(np.array(cur))
+            back.append(bk)
+        last = [best[-1][j] + 0.5 * fit(c, max(c + 1, int(round(pe[-1]))), sec[-1][2] % 12)
+                for j, c in enumerate(cand[-1])]
+        ji = [int(np.argmax(last))]
+        for i in range(n - 1, 0, -1):
+            ji.append(back[i - 1][ji[-1]])
+        ji = ji[::-1]
+        js = [cand[i][j] for i, j in enumerate(ji)]
+        for i, (j, x) in enumerate(zip(js, sec)):
+            shift = j - p[i]
+            end = pe[i] + shift
+            if i + 1 < n:
+                end = min(max(end, j + 1), js[i + 1])
+            out.append([phase + j * slot, phase + max(j + 1, end) * slot, x[2], x[3]])
+    out.sort(key=lambda x: x[0])
+    for i, x in enumerate(out if sustain else []):  # hold through the singer's sustain (ties across barlines aren't read)
+        nxt = out[i + 1][0] if i + 1 < len(out) else x[1] + 4 * beat
+        j = int(round((x[1] - phase) / slot))
+        while j < ns and phase + j * slot < min(nxt, x[1] + 2 * beat) and R[j] > 0.3:
+            j += 1
+        x[1] = max(x[1], min(nxt, phase + j * slot))
+    for i in range(len(out) - 1):  # legato, with a breath before repeated notes
+        nxt = out[i + 1][0]
+        if out[i][1] > nxt - 0.005:
+            out[i][1] = nxt - (0.04 if out[i + 1][2] == out[i][2] else 0.005)
+    return out, kg, report
+
+
+def follow_singer(notes, sections, pyin_cache, min_voiced=30):
+    """Where a bar of the arrangement clearly isn't what the singer sings (piano
+    arrangements sometimes harmonise the tune instead of doubling it), move that bar's
+    notes along the section's scale by the whole-bar step shift that best matches the
+    singer's pitch track. Note count and rhythm stay the score's."""
+    f0, vflag, _ = np.load(pyin_cache)
+    pc = np.where(vflag > 0, np.round(69 + 12 * np.log2(np.nan_to_num(f0, nan=440) / 440)) % 12, -1)
+
+    def score(ns):
+        tot = vox = 0
+        for s, e, m, _ in ns:
+            seg = pc[int(s / 0.02):int(e / 0.02)]
             v = seg >= 0
-            tot += np.sum(seg[v] == m % 12) - 0.35 * np.sum(seg[v] != m % 12) + 0.6 * A[m % 12, a:b].sum()
-        return tot
+            tot += np.sum(seg[v] == m % 12) - 0.3 * np.sum(seg[v] != m % 12)
+            vox += v.sum()
+        return tot, vox
 
-    out, prev_end, prev_off = [], None, None
-    for lo_bar, hi_bar in sections:
-        sec = [x for x in melody if lo_bar <= x[3] <= hi_bar]
+    changed = []
+    for lo, hi in sections:
+        sec = [x for x in notes if lo <= x[3] <= hi]
         if not sec:
             continue
-        s0, s1 = sec[0][0], sec[-1][1]
-        if prev_off is None:
-            cands = np.arange(-15, 40, hop)
-        else:
-            cands = np.arange(prev_off - 6, prev_off + 40, hop)
-        cands = [o for o in cands if prev_end is None or s0 + o >= prev_end - 0.2]
-        coarse = cands[::5]
-        best = max(coarse, key=lambda o: match(sec, o))
-        best = max([o for o in cands if abs(o - best) <= 0.12], key=lambda o: match(sec, o))
-        # 2-bar block refinement
-        blocks = {}
-        for x in sec:
-            blocks.setdefault((x[3] - lo_bar) // 2, []).append(x)
-        for k in sorted(blocks):
-            blk = blocks[k]
-            offs = np.arange(best - 0.5, best + 0.5 + 1e-9, hop)
-            o = max(offs, key=lambda o: match(blk, o) - 2.0 * abs(o - best))
-            out.extend([[x[0] + o, x[1] + o, x[2], x[3]] for x in blk])
-        prev_end = out[-1][1]
-        prev_off = best
-    out.sort(key=lambda x: x[0])
-    run = int(0.06 / hop)
-    prev = 0.0
-    for x in out:  # nudge onto the sung pitch, small moves only
-        lo, hi = max(prev, x[0] - 0.15), x[0] + 0.15
-        cand = [j * hop for j in range(int(lo / hop), int(hi / hop)) if 0 <= j < n - run and np.all(pc[j:j + run] == x[2] % 12)]
-        if cand:
-            nb = min(cand, key=lambda t: abs(t - x[0]))
-            x[1] += nb - x[0]
-            x[0] = nb
-        prev = x[0] + 0.04
-    for i in range(len(out) - 1):
-        if out[i + 1][0] > out[i][0]:
-            out[i][1] = min(max(out[i][1], out[i][0] + 0.08), out[i + 1][0] - 0.005)
-    return out, match(out, 0.0) / max(1, len(out))
+        hist = np.bincount([x[2] % 12 for x in sec], minlength=12)
+        scale = sorted(int(v) for v in np.argsort(hist)[::-1][:7])
+
+        for b in range(lo, hi + 1):
+            ns = [x for x in sec if x[3] == b]
+            base, vox = score(ns)
+            if not ns or vox < min_voiced:
+                continue
+            r = {k: score([[s, e, scale_step(m, k, scale), bb] for s, e, m, bb in ns])[0]
+                 for k in (-3, -2, -1, 1, 2, 3)}
+            k = max(r, key=r.get)
+            if r[k] - base > max(15, 0.5 * abs(base)):
+                changed.append((b, k, scale))
+    return changed
+
+
+def scale_step(m, k, scale):
+    """Move MIDI note m by k steps along a 7-note scale (pitch classes)."""
+    o, p = divmod(m, 12)
+    if p not in scale:
+        return m
+    i = scale.index(p) + k
+    return 12 * (o + i // 7) + scale[i % 7]
 
 
 def render(notes, stacks, sf2, swell):
@@ -275,6 +310,9 @@ def main():
     ap.add_argument('--full', default='', help='bars that get all the stops')
     ap.add_argument('--sections', default='', help='alignment sections (default: the vocal-bar ranges)')
     ap.add_argument('--transpose', type=int, default=0)
+    ap.add_argument('--no-follow-singer', dest='follow_singer', action='store_false',
+                    help='play the arrangement as written even where the singer sings other notes')
+    ap.add_argument('--lead', type=float, default=0.02, help='start organ notes this early (pipe attack)')
     ap.add_argument('--organ-db', type=float, default=1.0)
     ap.add_argument('--sf2', default=organ.SF2)
     a = ap.parse_args()
@@ -294,7 +332,27 @@ def main():
         for part in filter(None, a.sections.split(',')):
             lo, _, hi = part.partition('-')
             secs.append((int(lo), int(hi or lo)))
-    aligned, cost = align_sections(melody, allrh, secs, stems['vocals'], os.path.join(cache, 'pyin_f0.npy'), 60 / a.bpm)
+    beat = 60 / a.bpm
+    phase = beat_grid(stems['drums'], a.bpm)
+    feats = slot_features(stems['vocals'], os.path.join(cache, 'pyin_f0.npy'), phase, beat / 4,
+                          os.path.join(cache, 'slotfeat.npz'))
+    aligned, kg, report = align_grid(melody, secs, feats, phase, beat)
+    changed = []
+    if a.follow_singer:  # fix bars the arrangement harmonises, then re-snap them with the right pitches
+        rough, _, _ = align_grid(melody, secs, feats, phase, beat, sustain=False)
+        changed = follow_singer(rough, secs, os.path.join(cache, 'pyin_f0.npy'))
+        for b, k, scale in changed:
+            for x in melody:
+                if x[3] == b:
+                    x[2] = scale_step(x[2], k, scale)
+        if changed:
+            aligned, kg, report = align_grid(melody, secs, feats, phase, beat)
+    aligned = [[s - a.lead, e - a.lead, p, bar] for s, e, p, bar in aligned]
+    print('beat grid phase %.3f s, score -> recording offset %d beats' % (phase, kg))
+    for lo, hi, k, kb in report:
+        print('  bars %d-%d: offset %d beats (section alone prefers %d)' % (lo, hi, k, kb))
+    for b, k, _ in changed:
+        print('  bar %d: arrangement differs from the singer, melody moved %+d scale steps' % (b, k))
     med, full = ranges(a.medium), ranges(a.full)
     notes = [(s, e, p + a.transpose, 'full' if bar in full else 'medium' if bar in med else 'simple')
              for s, e, p, bar in aligned]
@@ -317,8 +375,8 @@ def main():
     organ.write_wav(a.out, mix)
     json.dump([dict(start=s, end=e, midi=p, reg=r) for s, e, p, r in notes], open(a.out + '.notes.json', 'w'))
     first = {r: min((s for s, _, _, rr in notes if rr == r), default=None) for r in stacks}
-    print('melody notes %d  mean match score %.2f  registration starts %s  -> %s'
-          % (len(notes), cost, {k: (round(v, 1) if v else None) for k, v in first.items()}, a.out))
+    print('melody notes %d  registration starts %s  -> %s'
+          % (len(notes), {k: (round(v, 1) if v else None) for k, v in first.items()}, a.out))
 
 
 if __name__ == '__main__':

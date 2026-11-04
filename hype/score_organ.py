@@ -36,12 +36,29 @@ def ranges(spec):
     return out
 
 
-def score_events(bars, vocal, five, bpm):
+def play_order(n_bars, repeats=()):
+    """Bar numbers in performance order, with each (first, last) repeat played twice."""
+    order, b = [], 1
+    reps = {lo: hi for lo, hi in repeats}
+    while b <= n_bars:
+        if b in reps:
+            seg = list(range(b, reps[b] + 1))
+            order += seg + seg
+            b = reps[b] + 1
+        else:
+            order.append(b)
+            b += 1
+    return order
+
+
+def score_events(bars, vocal, five, bpm, repeats=()):
     """Melody (top RH note per onset), the RH chord under each melody note, all RH notes,
-    and each bar's start, in score seconds."""
+    and each bar's start (the last pass, for repeated bars), in score seconds."""
     beat = 60.0 / bpm
     t_bar, melody, allrh, chords, starts = 0.0, [], [], [], {}
-    for b in bars:
+    by_num = {b['bar']: b for b in bars}
+    for bn in play_order(len(bars), repeats):
+        b = by_num[bn]
         nb = 5 if b['bar'] in five else 4
         starts[b['bar']] = t_bar
         if b['bar'] in vocal:
@@ -127,7 +144,7 @@ def slot_features(vocals_wav, pyin_cache, phase, slot, path):
     return CH, PC, ON, R
 
 
-def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True, fixed=None, starts=None):
+def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True, fixed=None, starts=None, offsets=None):
     """Score and recording share an exact tempo, so the score maps onto the recording's
     beat grid by a whole number of beats (searched globally, per section only when a
     section clearly prefers another). Within a section each note then snaps to a 16th
@@ -160,10 +177,13 @@ def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True, fix
     ks = range(-8, 41)
     kg = max(ks, key=lambda k: sum(match(s, k) for s in secs))
     out, report, pinned = [], [], set()
+    offsets = offsets or {}  # {first bar of a section: beats}, for arrangements that cut or stretch sections
     for sec in secs:
         scores = {k: match(sec, k) for k in ks}
         kb = max(scores, key=scores.get)
         k = kb if scores[kb] > 1.25 * max(scores[kg], 1e-9) else kg
+        if sec[0][3] in offsets:
+            k = offsets[sec[0][3]]
         report.append((sec[0][3], sec[-1][3], k, kb))
         p = [s / slot + 4 * k for s, _, _, _ in sec]
         pe = [e / slot + 4 * k for _, e, _, _ in sec]
@@ -437,7 +457,8 @@ def main():
     os.makedirs(cache, exist_ok=True)
     stems = organ.separate(a.song, cache)
     bars = json.load(open(a.score))
-    melody, allrh, chords, starts = score_events(bars, ranges(a.vocal_bars), ranges(a.five_four), a.bpm)
+    melody, allrh, chords, starts = score_events(bars, ranges(a.vocal_bars), ranges(a.five_four), a.bpm,
+                                                 [tuple(r) for r in cfg.get('repeats', [])])
     secs = []
     for part in filter(None, (a.sections or a.vocal_bars).split(',')):
         lo, _, hi = part.partition('-')
@@ -450,7 +471,8 @@ def main():
     phase = beat_grid(stems['drums'], a.bpm)
     feats = slot_features(stems['vocals'], os.path.join(cache, 'pyin_f0.npy'), phase, beat / 4,
                           os.path.join(cache, 'slotfeat.npz'))
-    grid = lambda **kw: align_grid(melody, secs, feats, phase, beat, fixed=fixed, starts=starts, **kw)
+    offs = {int(str(b).split('-')[0]): int(k) for b, k in cfg.get('section_offsets', {}).items()}
+    grid = lambda **kw: align_grid(melody, secs, feats, phase, beat, fixed=fixed, starts=starts, offsets=offs, **kw)
     aligned, kg, report = grid()
     changed = []
     if a.follow_singer:  # fix bars the arrangement harmonises, then re-snap them with the right pitches
@@ -467,7 +489,15 @@ def main():
         print('  bars %d-%d: offset %d beats (section alone prefers %d)' % (lo, hi, k, kb))
     for b, k, _ in changed:
         print('  bar %d: arrangement differs from the singer, melody moved %+d scale steps' % (b, k))
-    bar_time = lambda b, beats=0.0: phase + (starts[b] / beat + kg + beats) * beat  # recording time
+    sec_k = sorted((lo, offs.get(lo, kg)) for lo, _ in secs)
+
+    def k_at(b):  # the offset in force at bar b: its section's, else the last section's before it
+        ks_ = [k for lo, k in sec_k if lo <= b]
+        return ks_[-1] if ks_ else kg
+
+    def bar_time(b, beats=0.0):  # recording time of a score bar (+ beats)
+        b = min(b, max(starts))
+        return phase + (starts[b] / beat + k_at(b) + beats) * beat
 
     # registration plan: [[bars, stack name], ...]; stacks: built-ins or the config's own
     stacks = {'simple': organ_vocal.SIMPLE, 'medium': MEDIUM, 'full': organ_vocal.FULL}
@@ -483,8 +513,12 @@ def main():
         if bar in chord_bars:  # the arranger's chord under the tune, on lighter ranks
             notes += [(s, e, c + a.transpose, 'chord') for c in chords[i] if c < p and (p - c) % 12]
     pedal = cfg.get('pedal', {})
-    pev = sorted((bar_time(int(b), bt) - a.lead, note_midi(nm), int(b)) for b, evs in pedal.items() for bt, nm in evs)
+    pev = sorted((bar_time(int(b), bt) - a.lead, note_midi(nm), int(b)) for b, evs in pedal.items() for bt, nm in evs
+                 if int(b) in starts)
     fc = cfg.get('final_chord')
+    if fc and fc['bar'] not in starts:
+        print('  closing chord bar %d is not in this score; skipped' % fc['bar'])
+        fc = None
     if fc and a.final_release:
         fc = dict(fc, release=a.final_release)
     end_t, final_notes = None, []

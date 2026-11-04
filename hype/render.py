@@ -217,6 +217,8 @@ def main():
                             '-r', str(fps), '-i', '-', '-i', wav, '-c:v', 'libx264', '-preset', 'medium', '-crf', '18',
                             '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '256k', '-shortest', '-movflags', '+faststart',
                             out], stdin=subprocess.PIPE)
+    import soundfile as _sf
+    track = _sf.read(wav, dtype='float32')[0].mean(1) if any(m.get('kind') == 'scope' for s_ in seq for m in s_.get('mg', [])) else None
     post = fx.Post(W, H)
     base_fx = getattr(E, 'FX', {})  # edit-wide defaults, e.g. FX = dict(sat=0.0) for a black-and-white week
     src, src_i = None, -1
@@ -256,7 +258,19 @@ def main():
                 texts[j + 1][0] * beat if j + 1 < len(texts) and not s.get('stack') else sdur)
             if st <= ts < end:
                 size = tx[2] * H / 720
-                fx.text(f, tx[1], size, cy=tx[3], style=tx[4] if len(tx) > 4 else 'clean', slam_t=ts - st)
+                style = tx[4] if len(tx) > 4 else 'clean'
+                words = tx[1]
+                if style.endswith('-type'):  # typewriter: the caption types itself on, 45 ms a letter
+                    style = style[:-5]
+                    words = words[:max(1, int((ts - st) / 0.045) + 1)]
+                fx.text(f, words, size, cy=tx[3], style=style, slam_t=ts - st)
+        for mg in s.get('mg', []):  # motion graphics: dict(kind='rings'|'scope', ...)
+            mg = dict(mg)
+            kind = mg.pop('kind')
+            if kind == 'rings':
+                fx.rings(f, ts, **mg)
+            elif kind == 'scope' and track is not None:
+                fx.scope(f, track, 44100, t - b0 * beat, **mg)
         tb = (bt - math.floor(bt + 1e-9)) * beat
         every = s.get('fx', {}).get('every', 1)
         if every > 1:

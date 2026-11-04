@@ -354,8 +354,18 @@ class Post:
         self.n = 0
 
     def __call__(self, f, tb, ts, fx):
-        """f float frame. tb: seconds since last beat; ts: seconds since cut."""
+        """f float frame. tb: seconds since last beat; ts: seconds since cut.
+        Light-touch looks (all off unless the shot asks): trail (0-0.6, echo of earlier frames),
+        hue (degrees of slow hue breathing), drift (px of wandering RGB split), duotone ((dark rgb, light rgb)),
+        bloom (0-1 highlight glow), mirror ('h' folds the left half onto the right)."""
         W, H = self.W, self.H
+        if fx.get('mirror') == 'h':
+            f = f.copy()
+            f[:, W // 2:] = f[:, :W - W // 2][:, ::-1]
+        trail = fx.get('trail', 0.0)
+        if trail and getattr(self, 'prev', None) is not None and ts > getattr(self, 'last_ts', 1e9) >= 0:
+            f = f * (1 - trail) + self.prev * trail
+        self.prev, self.last_ts = (f.copy() if trail else None), ts
         punch = fx.get('punch', 0.06) * math.exp(-tb / 0.09)
         drift = fx.get('drift', 0.0) * ts
         shake = fx.get('shake', 10) * math.exp(-tb / 0.12)
@@ -376,6 +386,27 @@ class Post:
         if k:
             f[..., 0] = np.roll(f[..., 0], k, axis=1)
             f[..., 2] = np.roll(f[..., 2], -k, axis=1)
+        drift = fx.get('drift', 0)
+        if drift:
+            dx = int(round(drift * math.sin(ts * 2.1)))
+            dy = int(round(drift * 0.6 * math.sin(ts * 1.3 + 1.0)))
+            f[..., 0] = np.roll(np.roll(f[..., 0], dx, axis=1), dy, axis=0)
+            f[..., 2] = np.roll(np.roll(f[..., 2], -dx, axis=1), -dy, axis=0)
+        hue = fx.get('hue', 0)
+        if hue:
+            a = math.radians(hue * math.sin(ts * 2 * math.pi / 3.2))
+            c, sn = math.cos(a), math.sin(a)
+            # rotate chroma in YIQ space
+            m = np.array([[0.299, 0.587, 0.114], [0.596, -0.274, -0.322], [0.211, -0.523, 0.312]], np.float32)
+            r = np.array([[1, 0, 0], [0, c, -sn], [0, sn, c]], np.float32)
+            t = np.linalg.inv(m) @ r @ m
+            f = f @ t.T.astype(np.float32)
+        bloom = fx.get('bloom', 0)
+        if bloom:
+            small = Image.fromarray(np.clip(f, 0, 255).astype(np.uint8)).resize((W // 4, H // 4), Image.BILINEAR)
+            hi = np.clip(np.asarray(small, np.float32) - 170, 0, 255) * 2.2
+            glow = Image.fromarray(np.clip(hi, 0, 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(W / 160))
+            f = f + np.asarray(glow.resize((W, H), Image.BILINEAR), np.float32) * bloom
         flash = fx.get('flash', 0.85) * math.exp(-ts / 0.05)
         if flash > 0.01:
             f = f + (255 - f) * flash
@@ -383,6 +414,58 @@ class Post:
         x = x * x * (3 - 2 * x) * 0.35 + x * 0.65
         g = x.mean(2, keepdims=True)
         x = g + (x - g) * fx.get('sat', 1.18)
+        duo = fx.get('duotone')
+        if duo:
+            lo, hi = np.array(duo[0], np.float32) / 255, np.array(duo[1], np.float32) / 255
+            x = x * (1 - fx.get('duo_mix', 0.55)) + (lo + (hi - lo) * x.mean(2, keepdims=True)) * fx.get('duo_mix', 0.55)
         f = x * 255 * self.vig + self.grain[self.n % len(self.grain)]
         self.n += 1
         return np.clip(f, 0, 255).astype(np.uint8)
+
+
+# ---------------------------------------------------------------- motion graphics (light touch)
+
+_grid_cache = {}
+
+
+def _radius(W, H, cx, cy):
+    key = (W, H, round(cx, 3), round(cy, 3))
+    if key not in _grid_cache:
+        ys, xs = np.mgrid[0:H, 0:W].astype(np.float32)
+        _grid_cache.clear()
+        _grid_cache[key] = np.sqrt((xs - cx * W) ** 2 + (ys - cy * H) ** 2)
+    return _grid_cache[key]
+
+
+def rings(frame, ts, cx=0.5, cy=0.5, period=0.7, n=3, width=1.6, alpha=0.35, color=(255, 255, 255), reach=0.75):
+    """Thin concentric rings radiating out from (cx, cy), like a phone signal; each fades as it grows."""
+    H, W = frame.shape[:2]
+    r = _radius(W, H, cx, cy)
+    R = reach * math.hypot(W, H) / 2
+    a = np.zeros((H, W), np.float32)
+    for k in range(n):
+        ph = ((ts / period) + k / n) % 1.0
+        rk = ph * R
+        a = np.maximum(a, np.exp(-((r - rk) / (width * H / 1080)) ** 2) * (1 - ph) ** 1.5)
+    a = (a * alpha)[..., None]
+    frame *= 1 - a
+    frame += np.array(color, np.float32) * a
+
+
+def scope(frame, samples, sr, t, y=0.86, amp=0.05, alpha=0.55, span=0.05, color=(255, 255, 255)):
+    """A fine oscilloscope trace of the soundtrack around time t (the voice made visible)."""
+    H, W = frame.shape[:2]
+    i0 = int((t - span / 2) * sr)
+    seg = samples[max(0, i0):max(0, i0) + int(span * sr)]
+    if len(seg) < 8:
+        return
+    idx = np.linspace(0, len(seg) - 1, 480).astype(int)
+    v = seg[idx] / (np.abs(samples).max() + 1e-9)
+    xs = np.linspace(W * 0.08, W * 0.92, len(v))
+    ys = y * H - v * amp * H * 4
+    img = Image.new('L', (W, H), 0)
+    ImageDraw.Draw(img).line(list(zip(xs.tolist(), ys.tolist())), fill=255, width=max(1, int(2 * H / 1080)))
+    m = (np.asarray(img, np.float32) / 255 * alpha)[..., None]
+    frame *= 1 - m
+    frame += np.array(color, np.float32) * m
+

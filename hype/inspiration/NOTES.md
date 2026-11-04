@@ -65,6 +65,10 @@ never an attack line. Ideas to rotate:
     color, and text style 'serif' (EB Garamond italic, fades in instead of slamming), e.g. (0, 'Be excellent.', 40, 0.62, 'serif').
 - Will (Nov 4): zoom out from the Catholic focus to a broader set of values: excellence across every field
   (pioneers, builders, scientists, athletes, artists, service, family, faith).
+- Will's cast list for "Your country is calling" (Nov 4), good for any week: the military branches and wars,
+  American entrepreneurs and innovators, American saints and preachers (Fulton Sheen, Billy Graham, MLK Jr.,
+  Bishop Barron), explorers (Lewis and Clark, Aldrin, Armstrong), sports stars, manual-labor jobs (janitors,
+  landscapers, builders, grocers), thinkers (Einstein), mothers and fathers, schoolteachers, police officers.
 
 ## Music ideas
 - Fall Out Boy – "My Songs Know What You Did in the Dark (Light Em Up)", reimagined on pipe organ.

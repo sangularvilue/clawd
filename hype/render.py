@@ -147,6 +147,34 @@ def main():
                if s.get('screech') is not None and b0 <= starts[i] < b1]
         audio.drums(bpm, dur, wav, braams=braams, screech=scr[0] if scr else None)
 
+    # Song treatments (beats of the edit):
+    #  LOFI = dict(until=<beat>, cutoff=2400, hp=160): the song plays muffled, near-mono, with tape wobble and faint
+    #  vinyl crackle until that beat, then opens to full fidelity (the finale payoff).
+    #  SILENCE = [(<beat>, <beat>), ...]: the song drops out completely (e.g. one beat of nothing before the finale).
+    lofi = getattr(E, 'LOFI', None) if a.song else None
+    silences = [((x0 - b0) * beat, (x1 - b0) * beat) for x0, x1 in getattr(E, 'SILENCE', [])] if a.song else []
+    if lofi or silences:
+        treated = out + '.lofi.wav'
+        t_open = (lofi['until'] - b0) * beat if lofi else -1.0
+        mute = '*'.join("(1-between(t,%f,%f))" % (x0, x1) for x0, x1 in silences) or '1'
+        if lofi:
+            fc = ('[0:a]asplit=2[c][l];'
+                  '[l]highpass=f=%d,lowpass=f=%d,lowpass=f=%d,vibrato=f=0.6:d=0.02,'
+                  'pan=stereo|c0=0.65*c0+0.35*c1|c1=0.35*c0+0.65*c1,volume=1.15[lf];'
+                  'aevalsrc=\'0.25*gt(random(0)\\,0.9993)*(random(1)-0.5)|0.25*gt(random(2)\\,0.9993)*(random(3)-0.5)\':s=44100:d=%f,'
+                  'highpass=f=1500[ck];'
+                  'anoisesrc=d=%f:c=pink:a=0.004:r=44100,aformat=channel_layouts=stereo,highpass=f=2000[hs];'
+                  '[lf][ck][hs]amix=inputs=3:normalize=0:duration=first,volume=\'if(lt(t,%f),1,0)*%s\':eval=frame[lo];'
+                  '[c]volume=\'if(lt(t,%f),0,1)*%s\':eval=frame[cl];'
+                  '[lo][cl]amix=inputs=2:normalize=0:duration=first[o]'
+                  % (lofi.get('hp', 160), lofi.get('cutoff', 2400), lofi.get('cutoff', 2400), dur, dur,
+                     t_open, mute, t_open, mute))
+        else:
+            fc = "[0:a]volume='%s':eval=frame[o]" % mute
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', wav, '-filter_complex', fc, '-map', '[o]',
+                        '-ar', '44100', '-ac', '2', treated], check=True)
+        os.replace(treated, wav)
+
     # Voices over the music, which ducks underneath each one:
     #  - sound bites: clips marked voice=True play their own audio during their shot
     #    (voice_tail= lets the line finish past the cut, voice_gain=, duck=)

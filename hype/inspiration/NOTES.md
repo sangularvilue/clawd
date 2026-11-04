@@ -46,19 +46,24 @@ never an attack line. Ideas to rotate:
   Apollo 13 "Failure is not an option".
 
 ## Reference edits (food for thought)
-- **"Be Excellent."** (Red5 on X, May 12 2026, 50 s; https://x.com/Red5djedi/status/2054057365045981245). Will: "That one is good too."
-  - Look: everything graded black-and-white, so archival footage of every quality reads as one film (it would rescue SD clips).
-  - Cast: a pantheon of American excellence rather than hardware: JFK at Rice, Washington's portrait, Lindbergh,
-    Jobs unveiling the iPod, Bobby Fischer, Ali ("I'm the best ever"), Tyson, Michael Jackson, Jordan, Walt Disney,
-    Elvis, the Model T line, lumberjacks and factory hands, the Saturn V, the Apollo flag.
+- **"Be Excellent."** (Red5 on X, May 12 2026, 50 s; https://x.com/Red5djedi/status/2054057365045981245). Will: "legitimately one of
+  the best edits I've ever seen."
+  - Sound is the backbone: Kanye's "Stronger" runs lo-fi (muffled, filtered) under almost the whole thing, with real voices
+    sampled over it: JFK's Rice speech at the start, Biden's "We OWN the finish line!", the Apollo launch countdown, and more.
+    A full one-second silence at 0:35 before the finale.
+  - Look: mostly black-and-white, so archival footage of every quality reads as one film, with some sports, rockets and the
+    Moon in grainy color.
+  - Cast: a wide range of ways to be excellent, not one theme: JFK, Washington, Lindbergh, Jobs unveiling the iPod, Bobby
+    Fischer, Ali ("I'm the best ever"), Tyson, Michael Jackson, Jordan, Walt Disney, Elvis, the Model T line, lumberjacks
+    and factory hands, the Saturn V, the Apollo flag.
   - Words: small, elegant serif captions, one or two words per cut, building sentences across shots ("This country /
     was conquered / by those who moved / forward.", "harder", "faster", "better", "do it"), sincere, never jokes.
-  - Sound: a ~104 BPM track with the Apollo launch countdown ("T-minus 15 seconds, guidance is internal... 3, 2, 1")
-    sampled into it; a full one-second silence at 0:35 before the finale.
-  - Shape: a glowing CRT-style US map with typed text as the cold open, slow cuts that tighten to one per beat
-    (~0.58 s) through the middle, then the finale holds on a single image (the flag on the Moon) under "Be excellent."
-  - To try it some week: FX = dict(sat=0.0) in the edit for an all-black-and-white grade, and text style 'serif'
-    (EB Garamond italic, fades in instead of slamming), e.g. text=[(0, 'Be excellent.', 40, 0.62, 'serif')].
+  - Shape: a glowing CRT-style US map with typed text as the cold open, cuts that tighten to one per beat (~0.58 s)
+    through the middle, then the finale holds on a single image (the flag on the Moon) under "Be excellent."
+  - Tools for it: FX = dict(sat=0.0) in an edit for a black-and-white grade, fx=dict(sat=1.1) on the shots that go
+    color, and text style 'serif' (EB Garamond italic, fades in instead of slamming), e.g. (0, 'Be excellent.', 40, 0.62, 'serif').
+- Will (Nov 4): zoom out from the Catholic focus to a broader set of values: excellence across every field
+  (pioneers, builders, scientists, athletes, artists, service, family, faith).
 
 ## Music ideas
 - Fall Out Boy – "My Songs Know What You Did in the Dark (Light Em Up)", reimagined on pipe organ.

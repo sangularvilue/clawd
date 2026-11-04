@@ -49,7 +49,8 @@ never an attack line. Ideas to rotate:
 - **"Be Excellent."** (Red5 on X, May 12 2026, 50 s; https://x.com/Red5djedi/status/2054057365045981245). Will: "legitimately one of
   the best edits I've ever seen."
   - Sound is the backbone: Kanye's "Stronger" runs lo-fi (muffled, filtered) under almost the whole thing, with real voices
-    sampled over it: JFK's Rice speech at the start, Biden's "We OWN the finish line!", the Apollo launch countdown, and more.
+    sampled over it: JFK's Rice speech at the start, cut back and forth with the Apollo ignition countdown
+    (speech line, countdown, speech line, countdown, a call-and-response), Biden's "We OWN the finish line!", and more.
     A full one-second silence at 0:35 before the finale.
   - Look: mostly black-and-white, so archival footage of every quality reads as one film, with some sports, rockets and the
     Moon in grainy color.

@@ -190,6 +190,7 @@ def main():
                             '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '256k', '-shortest', '-movflags', '+faststart',
                             out], stdin=subprocess.PIPE)
     post = fx.Post(W, H)
+    base_fx = getattr(E, 'FX', {})  # edit-wide defaults, e.g. FX = dict(sat=0.0) for a black-and-white week
     src, src_i = None, -1
     nframes = int(round(dur * fps))
     for i in range(nframes):
@@ -232,7 +233,7 @@ def main():
         every = s.get('fx', {}).get('every', 1)
         if every > 1:
             tb = ((bt - starts[k]) % every) * beat
-        frame = post(f, tb, ts, s.get('fx', {}))
+        frame = post(f, tb, ts, dict(base_fx, **s.get('fx', {})))
         enc.stdin.write(frame.tobytes())
         if i % 30 == 0:
             print('\rframe %d/%d' % (i, nframes), end='', flush=True)

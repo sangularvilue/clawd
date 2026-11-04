@@ -45,6 +45,21 @@ never an attack line. Ideas to rotate:
   "What we do in life echoes in eternity"; Return of the King "But it is not this day!"; Patton's opening;
   Apollo 13 "Failure is not an option".
 
+## Reference edits (food for thought)
+- **"Be Excellent."** (Red5 on X, May 12 2026, 50 s; https://x.com/Red5djedi/status/2054057365045981245). Will: "That one is good too."
+  - Look: everything graded black-and-white, so archival footage of every quality reads as one film (it would rescue SD clips).
+  - Cast: a pantheon of American excellence rather than hardware: JFK at Rice, Washington's portrait, Lindbergh,
+    Jobs unveiling the iPod, Bobby Fischer, Ali ("I'm the best ever"), Tyson, Michael Jackson, Jordan, Walt Disney,
+    Elvis, the Model T line, lumberjacks and factory hands, the Saturn V, the Apollo flag.
+  - Words: small, elegant serif captions, one or two words per cut, building sentences across shots ("This country /
+    was conquered / by those who moved / forward.", "harder", "faster", "better", "do it"), sincere, never jokes.
+  - Sound: a ~104 BPM track with the Apollo launch countdown ("T-minus 15 seconds, guidance is internal... 3, 2, 1")
+    sampled into it; a full one-second silence at 0:35 before the finale.
+  - Shape: a glowing CRT-style US map with typed text as the cold open, slow cuts that tighten to one per beat
+    (~0.58 s) through the middle, then the finale holds on a single image (the flag on the Moon) under "Be excellent."
+  - To try it some week: FX = dict(sat=0.0) in the edit for an all-black-and-white grade, and text style 'serif'
+    (EB Garamond italic, fades in instead of slamming), e.g. text=[(0, 'Be excellent.', 40, 0.62, 'serif')].
+
 ## Music ideas
 - Fall Out Boy – "My Songs Know What You Did in the Dark (Light Em Up)", reimagined on pipe organ.
 

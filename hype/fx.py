@@ -18,6 +18,7 @@ BLUE = (0, 40, 104)
 # ---------------------------------------------------------------- fonts / text
 
 DEFAULT_FONT = 'ChakraPetch-700.ttf'
+SERIF_FONT = 'EBGaramond-MediumItalic.ttf'  # small elegant captions (style='serif')
 
 
 @lru_cache(maxsize=64)
@@ -31,7 +32,7 @@ def _line_width(f, line, track):
 
 @lru_cache(maxsize=256)
 def _text_rgba(text, size, style, name, max_w):
-    track_k = 0.0 if style == 'mono' else 0.06
+    track_k = 0.0 if style in ('mono', 'serif') else 0.06
     while True:
         f = font(size, name)
         track = size * track_k
@@ -55,6 +56,12 @@ def _text_rgba(text, size, style, name, max_w):
     if style == 'mono':
         g = np.asarray(glyphs, np.float32)
         return np.dstack([np.full(g.shape + (3,), 255, np.float32), g])
+    if style == 'serif':  # soft drop shadow only: reads like a subtitle, not a slam
+        g = np.asarray(glyphs, np.float32) / 255
+        sh = np.asarray(glyphs.filter(ImageFilter.GaussianBlur(max(2, size / 10))), np.float32) / 255
+        alpha = np.maximum(np.clip(sh * 0.7, 0, 1), g)
+        rgb = np.repeat((g * 255.0 / np.maximum(alpha, 1e-6))[..., None], 3, axis=2)
+        return np.dstack([rgb, alpha * 255])
     shadow = glyphs.filter(ImageFilter.GaussianBlur(max(2, size / 14)))
     edge = glyphs.filter(ImageFilter.MaxFilter(3 if size < 60 else 5))
     sh = np.asarray(shadow, np.float32) / 255
@@ -74,6 +81,11 @@ def text(frame, s, size, cx=0.5, cy=0.5, style='clean', slam_t=None, name=DEFAUL
     frame are shrunk to fit."""
     H, W = frame.shape[:2]
     scale = 1.0
+    if style == 'serif':  # captions fade in quickly instead of slamming
+        name = SERIF_FONT
+        if slam_t is not None:
+            alpha *= min(1.0, max(0.0, slam_t) / 0.08)
+        slam_t = None
     if slam_t is not None:
         scale = 1.0 + 0.9 * math.exp(-max(0.0, slam_t) / 0.04)
         scale = round(scale * 25) / 25

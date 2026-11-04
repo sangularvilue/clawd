@@ -75,22 +75,23 @@ def _dur(path):
         return None
 
 
-# ---- the speech pre-roll: the song waits for the line, then lands on the next beat
-SPEECH = 'media/' + P + 'speech_pdh.m4a'
-if not os.path.exists(os.path.join(HERE, SPEECH)):
-    SPEECH = 'media/' + P + 'speech_ike.m4a'
-SPEECH_AT = 0.5  # beats of silence before the first word
-sd = _dur(os.path.join(HERE, SPEECH))
-MUSIC_IN = 2 * math.ceil((SPEECH_AT + (sd or 5.0) / BEAT + 0.6) / 2) if sd else 8  # whole bars' worth of beats, even
-VOICEOVER = [dict(file=SPEECH, at=SPEECH_AT, src_in=0.0, dur=sd, gain=1.5, duck=1.0)] if sd else []
-
-pre_a = round(MUSIC_IN * 0.36 * 2) / 2
-pre_b = round(MUSIC_IN * 0.32 * 2) / 2
-pre_c = MUSIC_IN - pre_a - pre_b
+# ---- the speech pre-roll: Reagan, Pointe du Hoc, 6 June 1984 (WHCA recording, public domain),
+# the ~7 s of applause between the two sentences closed up. The organ lands 0.45 s after "cliffs".
+SPEECH = 'media/' + P + 'speech_pdh_tight.m4a'
+LINE_END = 5.76  # s into the file: end of "...who took the cliffs."
+if not os.path.exists(os.path.join(HERE, SPEECH)):  # fallback: Eisenhower's D-Day message
+    SPEECH, LINE_END = 'media/' + P + 'speech_ike.m4a', 7.85
+sd = _dur(os.path.join(HERE, SPEECH)) or 6.4
+MUSIC_IN = max(8, math.ceil((0.5 + (LINE_END + 0.45) / BEAT)))  # whole beats, so the beat fx stay on the grid
+SPEECH_AT = MUSIC_IN - (LINE_END + 0.45) / BEAT
+VOICEOVER = [dict(file=SPEECH, at=SPEECH_AT, src_in=0.0, dur=min(sd, LINE_END + 0.3), gain=1.0, duck=1.0)]
+# Reagan's own clip starts 0.15 s before "These"; line his lips up with the voiceover
+reagan_in = max(0.0, 0.15 - (SPEECH_AT - 1) * BEAT)
 PRE = [
-    C('cliffs', 'POINTE DU HOC', 'the cliffs from the sea', pre_a, dim=0.25, speed=0.8),
-    C('reagan_pdh', 'REAGAN', 'Pointe du Hoc, 1984', pre_b, dim=0.15),
-    C('rangers_climb', 'RANGERS', 'up the cliffs', pre_c, dim=0.2, speed=0.85),
+    C('cliffs', 'POINTE DU HOC', 'the cliffs', 1, dim=0.3, speed=0.8, **{'in': 0.8}),
+    C('reagan_pdh', 'REAGAN', 'Pointe du Hoc, 1984', 4, dim=0.1, **{'in': reagan_in}),
+    C('cliffs_2', 'POINTE DU HOC', 'up the cliff face', 3, dim=0.2, speed=0.85, alt=('cliffs', 1.5)),
+    C('rangers_climb', 'RANGERS', 'up the rope', MUSIC_IN - 8, dim=0.15, speed=0.9),
 ]
 
 # ---- the organ comes in (song beat 0)
@@ -103,7 +104,7 @@ CHORUS = [
     # +8  the mountains and the Rangers
     C('ski_troops', '10TH MOUNTAIN', 'ski troops', 2),
     C('alpine', 'THE ALPS', 'avalanche / ridge', 1),
-    C('rangers_climb', 'RANGERS', 'the climb', 1, **{'in': 1.5}),
+    C('ski_troops_2', '10TH MOUNTAIN', 'skis on shoulders', 1, alt=('ski_troops', 1.0), **{'in': 0.3}),
     C('carrier', 'CARRIER', 'cat launch', 2),
     C('f22', 'F-22', 'afterburner', 2),
     # +16  the builders
@@ -113,8 +114,9 @@ CHORUS = [
     C('mach_2', 'MACH INDUSTRIES', 'second shot', 2, alt=('carrier_2', 0.5)),
     C('launch', 'LIFTOFF', 'engines, tower clear', 2),
     # +24  his places
-    C('chicago_river', 'CHICAGO', 'the green river', 2),
-    C('bulls', 'BULLS', 'Jordan', 1),
+    C('chicago_river', 'CHICAGO', 'dye boats', 1),
+    C('chicago_river_2', 'CHICAGO', 'the green river', 1),
+    C('bulls', 'BULLS', 'The Shot', 1),
     C('soldier_field', 'SOLDIER FIELD', 'Chicago', 1),
     C('lincoln', 'LINCOLN MEMORIAL', 'push in', 1),
     C('blossoms', 'DC', 'cherry blossoms', 1),
@@ -131,45 +133,48 @@ TUTTI = [
     *strobe(C('carrier', 'CARRIER', 'launch', 1, **{'in': 1.0}),
             C('f22', 'F-22', 'pass', 1, **{'in': 1.2}),
             C('test_fire', 'TEST FIRE', 'plume', 1, **{'in': 1.5}),
-            C('thunder', 'LIGHTNING', 'the bolt', 1),
-            C('strongman', 'STRONGMAN', 'atlas stone', 1),
+            C('thunder', 'LIGHTNING', 'the bolt', 1, **{'in': 0.15}),
+            C('strongman', 'STRONGMAN', 'the roar', 1, **{'in': 1.4}),
             C('hypersonic', 'HYPERSONIC', 'launch', 1, **{'in': 1.0}),
             C('ski_troops', '10TH MOUNTAIN', 'downhill', 1, **{'in': 1.5}),
             C('fireworks_dc', 'THE MALL', 'fireworks', 1)),
     # +44  the meme, then grit
     M('09_crocodile_dunk_pray_harder.jpg', 2, zoom=(1.0, 1.06)),
     C('rocky_snow', 'ROCKY IV', 'in the snow', 2),
-    C('strug', 'KERRI STRUG', '1996', 1),
-    C('gibson', 'KIRK GIBSON', '1988', 1),
+    C('strug', 'KERRI STRUG', '1996', 1, **{'in': 0.6}),
+    C('gibson_2', 'KIRK GIBSON', 'the fist pump', 1, alt=('gibson', 0.2), **{'in': 1.6}),
     C('bodybuilder', 'BODYBUILDER', 'the pose', 1),
     C('bulls', 'BULLS', 'Jordan', 1, **{'in': 1.5}),
     # +52  reverent beat, then builders
     C('grotto', 'THE GROTTO', 'candles', 2),
     C('mach_3', 'MACH INDUSTRIES', 'third shot', 2, alt=('mach', 1.8)),
     # +56  one per beat
-    C('bells', 'BELLS', 'swinging', 1),
+    C('cathedral_2', 'NATIONAL SHRINE', 'the sanctuary', 1, alt=('cathedral', 1.5)),
     C('swiss_guard_2', 'SWISS GUARD', 'second take', 1, alt=('swiss_guard', 1.6)),
-    C('thunder', 'LIGHTNING', 'second bolt', 1, **{'in': 1.6}),
+    C('hypersonic_2', 'MINUTEMAN III', 'out of the silo', 1, **{'in': 0.6}),
     C('eagle_2', 'EAGLE', 'second take', 1, alt=('eagle', 1.6)),
     # +60  strobe into the final chord
     *strobe(C('fireworks_dc_2', 'FIREWORKS', 'finale', 1, alt=('fireworks_dc', 1.5)),
             C('launch', 'LIFTOFF', 'plume', 1, **{'in': 2.5}),
             C('organ_pipes_2', 'THE ORGAN', 'console', 1, alt=('organ_pipes', 1.5)),
-            C('carrier_2', 'CARRIER', 'second launch', 1, alt=('carrier', 2.0))),
+            C('carrier_2', 'CARRIER', 'second launch', 1, alt=('carrier', 2.0), **{'in': 0.4})),
     C('cliffs_2', 'POINTE DU HOC', 'the cliffs', 2, alt=('cliffs', 1.0)),
 ]
 
-# ---- the final chord (song beat 64) and the organ's release (song beat 72)
-_kobe = _find('kobe')[1] or _find('biden_finish')[1]
-_bite_key = 'kobe' if _find('kobe')[1] else 'biden_finish'
-_bite = _dur(_kobe) if _kobe else None
+# ---- the final chord (song beat 64), then Kobe gets the last word as the organ releases (song beat 72):
+# "Job's not finished. Job finished?" on him, "I don't think so." back on the card.
+KOBE = 'media/' + P + 'kobe.m4a'
+kobe_d = _dur(os.path.join(HERE, KOBE))
 END = [
-    C('cliffs_2', 'POINTE DU HOC', 'closing card', 8, alt=('cliffs', 2.0), dim=0.35, speed=0.6,
+    C('cliffs_2', 'POINTE DU HOC', 'closing card', 8, alt=('cliffs', 2.0), dim=0.4, speed=0.6,
       fx=dict(every=4, punch=0.06), text=[(0, 'TAKE THE CLIFFS.', 150, 0.5)]),
 ]
-if _bite:
-    END.append(C(_bite_key, 'KOBE', "Job's not finished.", round(max(3.0, _bite + 0.3) / BEAT * 2) / 2,
-                 voice=True, voice_gain=1.5, duck=0.6))
+if kobe_d:
+    kobe_at = MUSIC_IN + 72
+    VOICEOVER.append(dict(file=KOBE, at=kobe_at, src_in=0.0, dur=kobe_d, gain=1.0, duck=0.5))
+    END += [C('kobe', 'KOBE', "Job's not finished.", 5.5),
+            C('cliffs_2', 'POINTE DU HOC', 'card again', 2.5, alt=('cliffs', 3.0), dim=0.4, speed=0.6,
+              text=[(0, 'TAKE THE CLIFFS.', 150, 0.5)])]
 else:
     END[0]['beats'] = 13
 

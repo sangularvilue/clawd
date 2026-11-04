@@ -105,6 +105,12 @@ def heads(dark, sp, orig=None, lines_rel=None):
         w = sl[1].stop - sl[1].start
         if not (0.7 * sp <= w <= 2.0 * sp and 0.55 * sp <= h):
             continue
+        cy_ = (sl[0].start + sl[0].stop) // 2
+        reach = int(1.0 * sp)
+        left = dark[cy_, max(0, sl[1].start - reach):sl[1].start]
+        right = dark[cy_, sl[1].stop:sl[1].stop + reach]
+        if (len(left) == reach and left.all()) or (len(right) == reach and right.all()):
+            continue  # ink runs on sideways: a thick (double) beam, not a notehead
         cx = (sl[1].start + sl[1].stop) / 2
         k = max(1, int(round(h / (sp * 0.95))))  # stacked seconds/chords
         for j in range(k):
@@ -148,7 +154,7 @@ def heads(dark, sp, orig=None, lines_rel=None):
     return found
 
 
-def pitch(y, lines, clef, flats=()):
+def pitch(y, lines, clef, flats=(), sharps=()):
     sp = np.mean(np.diff(lines))
     steps = int(round((lines[-1] - y) / (sp / 2)))  # 0 = bottom line
     base = (2, 4) if clef == 'treble' else (4, 2)  # bottom line: E4 (treble) / G2 (bass) as (letter idx, octave)
@@ -158,7 +164,60 @@ def pitch(y, lines, clef, flats=()):
     midi = 12 * (octave + 1) + DIATONIC[letter]
     if LETTERS[letter] in flats:
         midi -= 1
+    if LETTERS[letter] in sharps:
+        midi += 1
     return midi, LETTERS[letter] + str(octave)
+
+
+def accidental(clean, hx, hy, sp, heads_xy):
+    """An accidental glyph just left of a notehead: 'sharp', 'natural', 'flat' or None. Accidentals are
+    separate ink blobs ~2.5-3 sp tall; sharps and naturals have two vertical strokes (a natural's are
+    offset: left one up, right one down), flats one stroke with a bowl."""
+    x0, x1 = int(hx - 2.4 * sp), int(hx - 0.55 * sp)
+    y0, y1 = int(hy - 2.0 * sp), int(hy + 2.0 * sp)
+    if x0 < 0 or y0 < 0:
+        return None
+    win = clean[y0:y1, x0:x1]
+    lab, n = ndimage.label(win)
+    best = None
+    for i, sl in enumerate(ndimage.find_objects(lab)):
+        h = sl[0].stop - sl[0].start
+        w = sl[1].stop - sl[1].start
+        if not (1.8 * sp <= h <= 3.6 * sp and 0.35 * sp <= w <= 1.4 * sp):
+            continue
+        gx0, gx1 = x0 + sl[1].start, x0 + sl[1].stop
+        gy0, gy1 = y0 + sl[0].start, y0 + sl[0].stop
+        if sl[0].start == 0 or sl[1].start == 0 or sl[0].stop == win.shape[0] or sl[1].stop == win.shape[1]:
+            continue  # runs out of the window: a stem or beam, not a free-standing glyph
+        if any(gx0 - 1 <= px <= gx1 + 1 and gy0 - 1 <= py <= gy1 + 1 for px, py in heads_xy):
+            continue  # it's a stem or another note
+        cy = (gy0 + gy1) / 2
+        if abs(cy - hy) > 0.9 * sp:
+            continue
+        if best is None or gx1 > best[1]:
+            best = (lab[sl] == i + 1, gx1)
+    if best is None:
+        return None
+    g = best[0]
+    cols = g.sum(0)
+    strokes = [j for j in range(len(cols)) if cols[j] >= 1.5 * sp]
+    groups = []
+    for j in strokes:
+        if groups and j - groups[-1][-1] <= 1:
+            groups[-1].append(j)
+        else:
+            groups.append([j])
+    if len(groups) == 1:
+        return 'flat'
+    if len(groups) >= 2:
+        def span(gr):
+            rows = np.where(g[:, gr].any(1))[0]
+            return rows.min(), rows.max()
+        (lt, lb), (rt, rb) = span(groups[0]), span(groups[-1])
+        if rt - lt > 0.3 * sp and rb - lb > 0.15 * sp:  # a natural's right stroke starts and ends lower
+            return 'natural'
+        return 'sharp'
+    return None
 
 
 def main():
@@ -168,8 +227,13 @@ def main():
     ap.add_argument('--flats-from-bar', type=int, default=0)
     ap.add_argument('--flats', default='')
     ap.add_argument('--time-sig-bars', default='1', help='bars that open with a time signature, e.g. 1,11,13')
+    ap.add_argument('--sharps', default='', help='key-signature sharps from bar 1, e.g. F,C,G')
+    ap.add_argument('--rh-below', type=float, default=6.0,
+                    help='how far below the treble staff (in staff spaces) noteheads are read; lower it when lyrics sit there')
+    ap.add_argument('--accidentals', action='store_true', help='read sharps/naturals/flats written before notes')
     a = ap.parse_args()
     flat_letters = set(a.flats.split(',')) if a.flats else set()
+    sharp_letters = set(a.sharps.split(',')) if a.sharps else set()
     a.time_sig_bars = {int(v) for v in a.time_sig_bars.split(',') if v}
     bars = []
     for pi, path in enumerate(a.pages):
@@ -190,6 +254,8 @@ def main():
                 skip_lo = x0 + (4.2 * sp if first else 0)
                 if first and a.flats_from_bar and bar_no >= a.flats_from_bar:
                     skip_lo += len(flat_letters) * 0.95 * sp
+                if first and sharp_letters:
+                    skip_lo += len(sharp_letters) * 1.05 * sp
                 if bar_no in a.time_sig_bars:
                     skip_lo += 2.3 * sp
                 skip_hi = x1 - (3.4 * sp if a.flats_from_bar and bar_no == a.flats_from_bar - 1 else 0)
@@ -197,21 +263,30 @@ def main():
                 notes = []
                 for staff, lines, clef in (('rh', tre, 'treble'), ('lh', bas, 'bass')):
                     y0 = int(lines[0] - 6 * sp)
-                    y1 = int(lines[-1] + 6 * sp)
+                    y1 = int(lines[-1] + (a.rh_below if clef == 'treble' else 6) * sp)
                     if clef == 'treble':
                         y1 = int(min(y1, (tre[-1] + bas[0]) / 2))
                     else:
                         y0 = int(max(y0, (tre[-1] + bas[0]) / 2))
                     sub = clean[max(0, y0):y1, x0 + 2:x1 - 1]
                     rel = [ly - max(0, y0) for ly in lines]
-                    for cx, cy, kind in heads(sub, sp, dark[max(0, y0):y1, x0 + 2:x1 - 1], rel):
-                        gx, gy = cx + x0 + 2, cy + max(0, y0)
-                        if not (skip_lo <= gx <= skip_hi):
-                            continue
+                    found = [(cx + x0 + 2, cy + max(0, y0), kind) for cx, cy, kind in
+                             heads(sub, sp, dark[max(0, y0):y1, x0 + 2:x1 - 1], rel)]
+                    found = sorted((h for h in found if skip_lo <= h[0] <= skip_hi), key=lambda h: h[0])
+                    held = {}  # an accidental lasts to the end of the bar for that staff position
+                    for gx, gy, kind in found:
                         fl = flat_letters if a.flats_from_bar and bar_no >= a.flats_from_bar else ()
-                        m, name = pitch(gy, lines, clef, fl)
+                        m, name = pitch(gy, lines, clef, fl, sharp_letters)
+                        acc = None
+                        if a.accidentals:
+                            acc = accidental(clean, gx, gy, sp, [(hx, hy) for hx, hy, k in found if k == 'filled'])
+                        if acc:
+                            base, _ = pitch(gy, lines, clef)
+                            held[name] = base + {'sharp': 1, 'natural': 0, 'flat': -1}[acc]
+                        if name in held:
+                            m = held[name]
                         notes.append(dict(staff=staff, midi=m, name=name, x=(gx - x0) / (x1 - x0),
-                                          px=float(gx), py=float(gy), head=kind))
+                                          px=float(gx), py=float(gy), head=kind, acc=acc))
                 bars.append(dict(bar=len(bars) + 1, page=pi + 1, x0=int(x0), x1=int(x1), sp=sp, notes=notes))
     json.dump(bars, open(a.out, 'w'), indent=0)
     print('%d bars, %d noteheads' % (len(bars), sum(len(b['notes']) for b in bars)))

@@ -52,6 +52,7 @@ never an attack line. Ideas to rotate:
 - One or two meme stills per video, as 1-beat flashes or a 2-beat hold with a slow push (photo=True; fit='contain' for portrait images). Keep their own captions; don't add new text.
 - Paintings (Thomas Cole, Revolution-era canvases): Ken Burns pushes on a downbeat.
 - Sound bites: a clip with voice=True plays its own audio over the song, which ducks underneath. Keep it to one or two per video and land them where the music breathes.
+- The Nov 4 video "TAKE THE CLIFFS" v2 (edits/weekly/2026-11-04.py) is the one he called "perfect": use it as the template.
 - Will's notes on the Nov 4 video (Nov 4): keep the music low underneath a speech (about 15 dB down) rather than
   silence, and keep Catholic imagery to quick flashes in the rapid-fire strobe runs, not 2-beat holds.
 - Speeches: VOICEOVER = [dict(file=..., at=<beat>, src_in=<s>, dur=<s>, gain=, duck=)] in the edit plays a speech across

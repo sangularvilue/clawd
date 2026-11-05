@@ -283,14 +283,14 @@ SWEEP_ALT = [('janitor', 0.0), ('workers_3', 0.0)]
 OPEN = [
     C('teens', 1.5),                                                 # 0    ring: a bored boy flops back on his bed
     C('teens_2', 1.5, **{'in': 0.7}),                                # 1.5  the soda fountain
-    C('jfk_bw', 3.9),                                                # 3    "And so, my fellow Americans:"
+    C('jfk_cbs', 3.9, **{'in': 14.020}),                             # 3    "And so, my fellow Americans:" (lips in sync)
     C('teens_3', 1.5, **{'in': 0.3}),                                # 6.9  ring: a shop student daydreams
     C('teens_4', 1.6, alt=[('teens_alt', 0.0)]),                     # 8.4  a girl alone on the porch steps
-    C('jfk', 5.5),                                                   # 10   "ask not what your country can do for you;"
-    C('jfk_wide_2', 2.4, fx=dict(trail=0.35)),                       # 15.5 the crowd
+    C('jfk_cbs', 6.6, **{'in': 17.025}),                             # 10   "ask not what your country can do for you;" (in sync)
+    C('jfk_wide_2', 1.3, fx=dict(trail=0.35)),                       # 16.6 the crowd
     C('teens_alt', 1.5, alt=[('teens', 2.0)]),                       # 17.9 ring: the boy on his bed, waiting
     C('teens', 1.6, **{'in': 2.2}),                                  # 19.4 staring at the ceiling
-    C('jfk_bw', 4.3, **{'in': 1.6}),                                 # 21   "ask what you can do for your country."
+    C('jfk_cbs', 4.3, **{'in': 21.890}),                             # 21   "ask what you can do for your country." (in sync)
     C('enlist', 1.5, mg=[RINGS], fx=dict(trail=0.3)),                 # 25.3 ring: SOLDIER, the oath
     C('ironworkers', 1.5, mg=[RINGS], fx=dict(DUO)),                 # 26.8 BUILDER: high steel
 ]
@@ -305,11 +305,11 @@ LINES = [
     C('nd_rockne', 1),                                               # 34.3 ATHLETE: Rockne
     C('farmer', 1, fx=dict(DUO)),                                    # 35.3 WORKER
     C('doughboys', 1, fx=dict(trail=0.35)),                          # 36.3 SOLDIER
-    C('sheen_up', 4.2, **{'in': 11.3}),                              # 37.3 Sheen points straight up: "Up, up, to God!"
+    C('sheen_up', 4.2, **{'in': round(11.40 - 0.05 * BEAT, 3)}),     # 37.3 Sheen points straight up: "Up, up, to God!" (in sync with his voice at 37.35)
 ]
 # ---- 41.5-56.3: King's sentence, each phrase on screen as he says it, the phone cutting in at his pause
 M1 = [
-    C('mlk', 1.5),                                                   # 33.5 "Even if it falls..."
+    C('mlk_still', 1.5, alt=[('mlk', 0.0)], fit='cover', zoom=(1.0, 1.06)),  # 41.5 King, a still (no lips moving under a different sermon)  "Even if it falls..."
     labor(0, 2.4, ('workers_2', 0.0)),                               # 35   "...your lot to be a"
     C('sweeper', 1.85, alt=SWEEP_ALT, **{'in': 0.4}),                # 37.4 "street sweeper," (St. Louis at dawn)
     C('ford', 1.5, mg=[RINGS]),                                      # 39.25 ring: BUILDER, the line
@@ -322,7 +322,7 @@ M1 = [
 WORK = [
     C('dam', 1.3, mg=[RINGS]),                                       # 56.3 ring: BUILDER, the high scaler
     C('steel', 2.0),                                                 # 57.6 WORKER
-    C('v_great_good', 2.0, alt=[('reagan_wall', 0.0)]),              # 59.6 Reagan: "America is good."
+    C('steel_2', 2.0, alt=[('steel', 1.0)]),                         # 59.6 a steelworker in his heat hood  (Reagan, voice only: "America is good.")
     C('loggers', 1.5),                                               # 61.6 WORKER
     C('ali', 1),                                                     # 63.1 ATHLETE
     C('miners_2', 1.5, alt=[('miners', 1.5)]),                       # 64.1 "And if America ever ceases to be good,"

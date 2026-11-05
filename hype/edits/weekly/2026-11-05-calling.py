@@ -1,9 +1,9 @@
-"""YOUR COUNTRY IS CALLING. A 16:9, ~92 s montage in the spirit of the "Be Excellent." edit Will loved.
+"""YOUR PURPOSE IS CALLING. A 16:9, ~91 s montage in the spirit of the "Be Excellent." edit Will loved.
 
 Mostly black-and-white archival film with grainy color payoffs; Little Dark Age (the original recording,
 vocals 6 dB down; or our pipe-organ version) runs lo-fi under nearly everything with real voices over it;
 light-touch looks (duotone, echo trails, RGB drift, one mirror, bloom) and signal rings when the phone
-rings. No on-screen text until the last line.
+rings. No on-screen text until the last line, "Your purpose is calling."
 
 It opens on a ringing phone over 1950s teenagers who haven't had the call yet, and JFK's inaugural
 straight away; the phone rings again when he finishes, in the pause between MLK's street sweeper and
@@ -356,7 +356,7 @@ FINALE = [
     C('earthrise', END_AT - 134.5, fx=dict(COLOR, bloom=0.3), zoom=(1.0, 1.08)),  # 134.5 Earthrise; the song stops
 ]
 # ---- the last ring; the girl answers it (the last shot)
-END_TEXT = os.environ.get('CALL_TEXT', 'Your country is calling.')
+END_TEXT = os.environ.get('CALL_TEXT', 'Your purpose is calling.')
 END = [
     C('phone_2', 11, speed=0.6, text=[(6.4, END_TEXT, 50, 0.84, 'serif')]),
 ]

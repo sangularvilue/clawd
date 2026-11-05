@@ -10,6 +10,8 @@
   ]
  ],
  "hollow_ties": false,
+  "repeat_gap": 0.12,
+  "gap": 0.02,
  "_offsets": "Found by sliding each phrase along the singer (pitch + chroma): verse phrases land every 4 recording bars, choruses lock strongly.",
  "section_offsets": {
   "10-11": -3,

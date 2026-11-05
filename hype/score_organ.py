@@ -144,7 +144,8 @@ def slot_features(vocals_wav, pyin_cache, phase, slot, path):
     return CH, PC, ON, R
 
 
-def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True, fixed=None, starts=None, offsets=None):
+def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True, fixed=None, starts=None, offsets=None,
+               repeat_gap=0.04, gap=0.005):
     """Score and recording share an exact tempo, so the score maps onto the recording's
     beat grid by a whole number of beats (searched globally, per section only when a
     section clearly prefers another). Within a section each note then snaps to a 16th
@@ -250,10 +251,11 @@ def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True, fix
         while j < ns and phase + j * slot < min(nxt, x[1] + 2 * beat) and R[j] > 0.3:
             j += 1
         x[1] = max(x[1], min(nxt, phase + j * slot))
-    for i in range(len(out) - 1):  # legato, with a breath before repeated notes
+    for i in range(len(out) - 1):  # legato, with a lift of the key before a repeated note (else they blur into one)
         nxt = out[i + 1][0]
-        if out[i][1] > nxt - 0.005:
-            out[i][1] = nxt - (0.04 if out[i + 1][2] == out[i][2] else 0.005)
+        g = min(repeat_gap, 0.3 * (nxt - out[i][0])) if out[i + 1][2] == out[i][2] else gap
+        if out[i][1] > nxt - g:
+            out[i][1] = nxt - g
     return out, kg, report
 
 
@@ -482,7 +484,8 @@ def main():
     feats = slot_features(stems['vocals'], os.path.join(cache, 'pyin_f0.npy'), phase, beat / 4,
                           os.path.join(cache, 'slotfeat.npz'))
     offs = {int(str(b).split('-')[0]): int(k) for b, k in cfg.get('section_offsets', {}).items()}
-    grid = lambda **kw: align_grid(melody, secs, feats, phase, beat, fixed=fixed, starts=starts, offsets=offs, **kw)
+    grid = lambda **kw: align_grid(melody, secs, feats, phase, beat, fixed=fixed, starts=starts, offsets=offs,
+                                   repeat_gap=cfg.get('repeat_gap', 0.04), gap=cfg.get('gap', 0.005), **kw)
     aligned, kg, report = grid()
     changed = []
     if a.follow_singer:  # fix bars the arrangement harmonises, then re-snap them with the right pitches

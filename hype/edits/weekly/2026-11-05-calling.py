@@ -209,13 +209,14 @@ for at, which, g in ((58.4, 0, 0.5), (82.6, 1, 0.5), (88.6, 0, 0.45),
                      (104.5, 1, 0.35), (114.2, 0, 0.35), (124.0, 1, 0.35)):
     ring(at, which, gain=g, duck=0.85)             # still ringing, under the music
 vo('v_great_good', 51.5, gain=1.0, duck=0.4)       # Reagan: "America is great because she is good."
-vo('fdr', 66.3, duck=0.4)                          # "This generation of Americans has a rendezvous with destiny."
-vo('v_example', 81.6, gain=1.0, duck=0.4)          # Clinton: "...the power of our example..." (over the legends, into the firefighters)
+vo('v_example', 66.5, gain=1.0, duck=0.4)          # Clinton: "...the power of our example..." (over the presidents)
 vo('bailey_live', 78.0, gain=1.1, duck=0.35)       # "I want to live again!" (George on screen for it)
 vo('miracle_call', 91.6, gain=0.9, duck=0.6)       # "Do you believe in miracles? YES!"
 vo('liftoff', DROP + 0.4, src_in=5.2, dur=2.3, gain=1.0, duck=0.8)  # "Liftoff! We have a liftoff!"
 vo('bailey_clarence', 129.6, gain=1.0, duck=0.45)  # "Attaboy, Clarence." under the last sung line (heard, not seen)
-END_AT = 137.4
+FDR_AT = STOP + 0.6
+vo('fdr', FDR_AT, gain=1.0, duck=1.0)              # after the song stops: "This generation of Americans has a rendezvous with destiny."
+END_AT = 149.0
 vo('phone_ring', END_AT - 0.4, src_in=0.0, dur=2.7, gain=0.9, duck=1.0)  # rings until she lifts the receiver
 
 # the chorus of voices: short iconic lines tumbling over each other, low under the working montage after King
@@ -298,7 +299,7 @@ WORK = [
 
 # ---- 66-96: the fourth chorus. FDR over the legends; George Bailey; the firefighters go in; the Miracle
 LEGENDS = [
-    C('fdr', 1, alt=[('dc_capitol_alt', 0.0)]),                      # 66
+    C('dc_capitol_alt', 1),                                          # 66  the Washington Monument
     C('washington', 2),                                              # 67  "This generation of Americans"
     C('wright_2', 1),                                                # 69  EXPLORER
     C('lincoln', 1),                                                 # 70
@@ -355,14 +356,24 @@ FINALE = [
     C('sweeper_2', 1.5, alt=[('sweeper', 2.8)] + SWEEP_ALT, fx=dict(COLOR), **{'in': 2.6}),  # 129.5 WORKER   "Attaboy,"
     C('lewis_clark', 1.5, fx=dict(COLOR), fit='cover', zoom=(1.04, 1.0)),  # 131 EXPLORER: Lewis and Clark reach the Pacific   "Clarence."
     C('bailey_family', 2, alt=[('dad_kid', 2.0)]),                   # 132.5 FAMILY: George home, his family in his arms
-    C('earthrise', END_AT - 134.5, fx=dict(COLOR, bloom=0.3), zoom=(1.0, 1.08)),  # 134.5 Earthrise; the song stops
+    C('earthrise', 3, fx=dict(COLOR, bloom=0.3), zoom=(1.0, 1.08)),  # 134.5 Earthrise; the song stops dead at 136
+]
+# ---- 137.5-149: FDR in the silence, over the generation answering now
+CODA = [
+    C('cadets', 1.5, fx=dict(COLOR), **{'in': 0.2}),                 # 137.5 "This generation"
+    C('alysa_liu_3', 1.5, alt=[('alysa_liu', 0.0)], fx=dict(COLOR)), # 139
+    C('artemis_2', 1.5, fx=dict(COLOR), **{'in': 2.8}),              # 140.5 "of Americans"
+    C('founder', 1.5, alt=[('jobs', 0.0)], fx=dict(COLOR)),          # 142
+    C('olympians_2024', 1.5, alt=[('hockey_2026', 1.5)], fx=dict(COLOR)),  # 143.5 "has a rendezvous"
+    C('kid_flag_alt', 2, fx=dict(COLOR)),                            # 145  "with destiny."
+    C('artemis_earth', 2, alt=[('earthrise', 0.0)], fx=dict(COLOR, bloom=0.3), zoom=(1.0, 1.06)),  # 147
 ]
 # ---- the last ring; the girl answers it (the last shot)
 END_TEXT = os.environ.get('CALL_TEXT', 'Your purpose is calling.')
 END = [
     C('phone_2', 11, speed=0.6, text=[(6.4, END_TEXT, 50, 0.84, 'serif')]),
 ]
-SEQ = OPEN + LINES + M1 + WORK + LEGENDS + FINALE + END
+SEQ = OPEN + LINES + M1 + WORK + LEGENDS + FINALE + CODA + END
 
 if __name__ == '__main__':
     import sys
@@ -370,7 +381,7 @@ if __name__ == '__main__':
         print('bed %s: %.2f s' % (SONG_VERSION, make_bed()))
     b = 0.0
     marks = {id(OPEN[0]): 'OPEN', id(LINES[0]): 'LINES', id(M1[0]): 'MLK', id(WORK[0]): 'WORK',
-             id(LEGENDS[0]): 'LEGENDS', id(FINALE[0]): 'FINALE', id(END[0]): 'END'}
+             id(LEGENDS[0]): 'LEGENDS', id(FINALE[0]): 'FINALE', id(CODA[0]): 'CODA', id(END[0]): 'END'}
     for s in SEQ:
         if id(s) in marks:
             print('%6.1f  %s' % (b, marks[id(s)]))

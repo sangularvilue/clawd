@@ -232,11 +232,10 @@ _chorus = [k for k in ('v_teddy', 'v_eagle', 'v_ike_2', 'v_jfk_moon', 'v_ali', '
 _at = 29.0
 for k in _chorus:
     d = min(_dur(os.path.join(HERE, media(k))) or 1.5, 2.6)
-    if _at + d / BEAT > 36.9:
+    if _at + d / BEAT > 41.2:
         break
     VOICEOVER.append(dict(file=media(k), at=_at, src_in=0.0, dur=d, gain=0.32, duck=1.0))
     _at += d / BEAT * 0.6
-vo('sheen_up_b', 37.35, gain=1.05, duck=0.4)      # Sheen, pointing straight up: "Up, up, to God!"  (to 41.4)
 MLK1 = 41.5
 vo('mlk_a', MLK1, gain=1.0, duck=0.4)              # "Even if it falls your lot to be a street sweeper,"   (to 47.1)
 ring(47.25)
@@ -250,12 +249,13 @@ ring(68.6)
 vo('reagan_3', 71.5, gain=1.0, duck=0.4)           # "America will cease to be great."         (to 75.2)
 # Clinton, one continuous take over the presidents and the legends (his pauses tightened)
 vo('clinton', 76.0, gain=1.0, duck=0.4)            # "People the world over have always been more impressed by the power of our example than by the example of our power."  (to 91.1)
-vo('bailey_live', 92.0, gain=1.1, duck=0.35)       # "I want to live again!" (George on screen for it)
-vo('miracle_call', 99.6, gain=0.9, duck=0.6)       # "Do you believe in miracles? YES!"
-for at, which, g in ((96.5, 1, 0.5), (113.0, 0, 0.35), (134.7, 1, 0.35), (152.0, 0, 0.35)):
+vo('bailey_live', 91.3, gain=1.1, duck=0.35)       # "I want to live again!" (George on screen for it)
+vo('miracle_call', 95.8, gain=0.9, duck=0.6)       # "Do you believe in miracles? YES!"
+vo('sheen_up_b', 100.4, gain=1.05, duck=0.4)      # the end of the black-and-white era, Sheen pointing straight up: "Up, up, to God!" ("God" ends on the downbeat)
+for at, which, g in ((113.0, 0, 0.35), (134.7, 1, 0.35), (152.0, 0, 0.35)):
     ring(at, which, gain=g, duck=0.85)             # still ringing, under the music
 # the dividing line: Apollo 11's call on the old rocket, then the new one's
-vo('liftoff', DROP + 0.4, src_in=5.2, dur=2.3, gain=1.0, duck=0.8)  # "Liftoff! We have a liftoff!"       (to 108.1)
+vo('liftoff', DROP + 0.05, src_in=5.2, dur=2.3, gain=1.0, duck=0.8)  # "Liftoff! We have a liftoff!"       (to 108.1)
 vo('v_artemis_liftoff', DROP + 4.3, gain=1.0, duck=0.6)            # "...and liftoff! The crew of Artemis II, now bound for the Moon."  (to 117.2)
 vo('v_finish_line', 117.4, gain=1.0, duck=0.5)                     # Biden, unseen: "And we own the finish line!" (on Lyles' photo finish)
 vo('bailey_clarence', 160.6, gain=1.0, duck=0.45)  # "Attaboy, Clarence." under the last sung line (heard, not seen)
@@ -294,7 +294,7 @@ OPEN = [
     C('enlist', 1.5, mg=[RINGS], fx=dict(trail=0.3)),                 # 25.3 ring: SOLDIER, the oath
     C('ironworkers', 1.5, mg=[RINGS], fx=dict(DUO)),                 # 26.8 BUILDER: high steel
 ]
-# ---- 28.3-41.5: the lines take their first steps; a chorus of voices low, then Sheen
+# ---- 28.3-41.5: the lines take their first steps; a chorus of voices low
 LINES = [
     C('lewis_clark_2', 1, alt=[('explorers', 0.0)]),                 # 28.3 EXPLORER: the keelboat heads up the Missouri
     C('owens', 1),                                                   # 29.3 ATHLETE: Bob Hayes
@@ -305,7 +305,10 @@ LINES = [
     C('nd_rockne', 1),                                               # 34.3 ATHLETE: Rockne
     C('farmer', 1, fx=dict(DUO)),                                    # 35.3 WORKER
     C('doughboys', 1, fx=dict(trail=0.35)),                          # 36.3 SOLDIER
-    C('sheen_up', 4.2, **{'in': round(11.40 - 0.05 * BEAT, 3)}),     # 37.3 Sheen points straight up: "Up, up, to God!" (in sync with his voice at 37.35)
+    C('wright', 1),                                                  # 37.3 EXPLORER: the Flyer
+    C('dad_kid', 1),                                                 # 38.3 FAMILY: grace at the table
+    C('explorers', 1),                                               # 39.3 EXPLORER: the wagons
+    C('marines_2', 1.2),                                             # 40.3 SOLDIER
 ]
 # ---- 41.5-56.3: King's sentence, each phrase on screen as he says it, the phone cutting in at his pause
 M1 = [
@@ -335,7 +338,7 @@ WORK = [
     C('navy', 0.9),                                                  # 73.1 SOLDIER
 ]
 
-# ---- 74-104: the fourth chorus. Reagan finishes, Clinton over the legends; George Bailey; the firefighters go in; the Miracle
+# ---- 74-104: the fourth chorus. Reagan finishes, Clinton over the legends; George Bailey; the firefighters go in; the Miracle; Sheen
 LEGENDS = [
     C('dc_capitol_alt', 1),                                          # 74  the Washington Monument
     C('washington', 2),                                              # 75
@@ -351,21 +354,20 @@ LEGENDS = [
     C('peck_hepburn', 1),                                            # 86.35 "than by the example"
     C('vietnam_korea', 1, fx=dict(drift=2)),                         # 87.35 SOLDIER: the Huey
     C('welles_2', 1),                                                # 88.35 "of our power."
-    C('lou_gehrig', 1),                                              # 89.35 ATHLETE
-    C('graham', 0.65),                                               # 90.35 FAMILY / faith
-    C('bailey_2', 1),                                                # 91  George faces the bank run
-    C('bailey_live', 1.65, alt=[('bailey', 0.0)]),                   # 92  George on the bridge: "I want to live again!"
-    C('wtc_fdny', 2, alt=[('firefighters_2', 0.0)]),                 # 93.65 WORKER: 9/11, Engine 21 down West Street
-    C('wtc_fdny_2', 2, alt=[('firefighters', 0.0)], **{'in': 1.8}),  # 95.65 a rig heads downtown, the towers ahead
-    C('wtc_fdny_3', 2, **{'in': 0.3}),                               # 97.65 an Engine 28 firefighter climbs the North Tower stairs
-    C('miracle_call', 1.35),                                         # 99.65 "Do you believe in miracles?" COLOR STARTS HERE, full frame
-    *strobe(C('hockey_2026', 1), C('phelps', 1), C('mach_2', 1),     # 101 "YES!" rapid fire
-            C('gabby', 1), C('retton', 1), C('us_womens_hockey', 1)),
+    C('lou_gehrig', 0.5),                                            # 89.35 ATHLETE
+    C('graham', 0.5),                                                # 89.85 FAMILY / faith
+    C('bailey_2', 0.95),                                             # 90.35 George faces the bank run
+    C('bailey_live', 1.65, alt=[('bailey', 0.0)]),                   # 91.3 George on the bridge: "I want to live again!"
+    C('wtc_fdny', 1.3, alt=[('firefighters_2', 0.0)]),               # 92.95 WORKER: 9/11, Engine 21 down West Street
+    C('wtc_fdny_2', 1.3, alt=[('firefighters', 0.0)], **{'in': 1.8}),  # 94.25 a rig heads downtown, the towers ahead
+    C('wtc_fdny_3', 1.3, **{'in': 0.3}),                             # 95.55 an Engine 28 firefighter climbs the North Tower stairs
+    C('miracle_call', 3.5, **{'in': round((96.85 - 95.8) * BEAT, 3)}),  # 96.85 "Do you believe in miracles? YES!" (black and white, in step with the call)
+    C('sheen_up', 3.65, **{'in': round(11.40 - 0.05 * BEAT, 3)}),    # 100.35 the last of the old era: Sheen points straight up, "Up, up, to God!"
 ]
 # ---- 104-168: the final chorus at full fidelity: Americans answering the call now, in color; the instrumental; the last line. The song stops at 168.
 FINALE = [
-    C('liftoff', 3, fx=dict(bloom=0.4, punch=0.12), mg=[dict(RINGS, cy=0.8, alpha=0.22, period=1.1)]),  # 104 "Liftoff! We have a liftoff!" (1969)
-    C('artemis', 3, alt=[('liftoff_2', 0.0)], fx=dict(bloom=0.35, punch=0.12), **{'in': 1.2}),  # 107 "...and liftoff! The crew of Artemis II"
+    C('liftoff', 2.5, fx=dict(bloom=0.4, punch=0.12), mg=[dict(RINGS, cy=0.8, alpha=0.22, period=1.1)], **{'in': 2.45}),  # 104 THE MODERN ERA BEGINS: color, the key change, Apollo rises off the pad on the downbeat. "Liftoff! We have a liftoff!"
+    C('artemis', 3.5, alt=[('liftoff_2', 0.0)], fx=dict(bloom=0.35, punch=0.12), **{'in': 1.2}),  # 106.5 "...and liftoff! The crew of Artemis II"
     C('artemis_2', 2, **{'in': 2.3}),                                # 110 the crew waves
     C('mach', 2, fx=dict(hue=6)),                                    # 112 the Pike takes off  "now bound for the Moon"
     C('founder', 2, alt=[('jobs', 0.0)]),                            # 114 Ethan Thornton at Mach's all-hands
@@ -414,7 +416,7 @@ END = [
     C('phone_reach', 8, speed=0.6, **{'in': 0.3}, text=[(3.4, END_TEXT, 50, 0.84, 'serif')]),
 ]
 
-# Black and white until the Miracle on Ice; from it on, color, except deliberate old references.
+# Black and white until the rocket on the key change; from it on, color, except deliberate old references.
 OLD_REFS = {'prevost_young', 'prevost_young_2', 'prevost_young_3', 'bailey_family', 'dad_kid', 'earthrise'}
 
 
@@ -427,8 +429,7 @@ def era(items):
         it['fx'] = dict(it.get('fx', {}), sat=0.0 if key in OLD_REFS else COLOR['sat'])
 
 
-_mi = next(i for i, it in enumerate(LEGENDS) if os.path.basename(it.get('clip', '')).startswith(P + 'miracle_call'))
-era(LEGENDS[_mi:] + FINALE)
+era(FINALE)
 SEQ = OPEN + LINES + M1 + WORK + LEGENDS + FINALE + END
 
 if __name__ == '__main__':

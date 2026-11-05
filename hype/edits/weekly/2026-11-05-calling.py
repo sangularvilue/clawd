@@ -222,8 +222,8 @@ vo('reagan_2', 64.1, gain=1.0, duck=0.4)           # "And if America ever ceases
 ring(68.6)
 vo('reagan_3', 71.5, gain=1.0, duck=0.4)           # "America will cease to be great."         (to 75.2)
 # Clinton, in two, over the presidents and the legends
-vo('clinton_1', 76.0, gain=1.0, duck=0.4)          # "People the world over have always been more impressed by the power of our example"  (to 85.4)
-vo('clinton_2', 86.4, gain=1.0, duck=0.4)          # "than by the example of our power."      (to 91.5)
+vo('clinton_1', 76.0, gain=1.0, duck=0.4)          # "People the world over have always been more impressed by the power of our example"  (to 85.6)
+vo('clinton_2', 86.2, gain=1.0, duck=0.4)          # "than by the example of our power."      (to 91.7)
 vo('bailey_live', 92.0, gain=1.1, duck=0.35)       # "I want to live again!" (George on screen for it)
 vo('miracle_call', 99.6, gain=0.9, duck=0.6)       # "Do you believe in miracles? YES!"
 for at, which, g in ((96.5, 1, 0.5), (113.0, 0, 0.35), (134.7, 1, 0.35)):

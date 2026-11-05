@@ -225,13 +225,13 @@ SWEEP_ALT = [('janitor', 0.0), ('workers_3', 0.0)]
 
 # ---- 0-23: the phone rings over teenagers who haven't had the call yet; JFK straight away; it rings again
 OPEN = [
-    C('teens', 1.5),                                                 # 0   ring
-    C('teens_2', 1.5),                                               # 1.5
+    C('teens', 1.5),                                                 # 0   ring: a bored boy flops back on his bed
+    C('teens_2', 1.5, **{'in': 0.7}),                                # 1.5 the soda fountain
     C('jfk_bw', 3.5),                                                # 3   "And so, my fellow Americans:"
-    C('teens_3', 1),                                                 # 6.5
+    C('teens_3', 1, **{'in': 0.3}),                                  # 6.5 a shop student daydreams
     C('jfk', 5),                                                     # 7.5 "ask not what your country can do for you;"
     C('jfk_wide_2', 2, fx=dict(trail=0.35)),                         # 12.5 the crowd
-    C('teens_4', 1, alt=[('teens', 2.0)]),                           # 14.5
+    C('teens_4', 1, alt=[('teens_alt', 0.0)]),                       # 14.5 a girl alone on the porch steps
     C('jfk_bw', 4, **{'in': 1.6}),                                   # 15.5 "ask what you can do for your country."
     C('enlist', 1.5, mg=[RINGS], fx=dict(trail=0.3)),                 # 19.5 SOLDIER: the oath   (ring)
     C('ironworkers', 1.5, mg=[RINGS], fx=dict(DUO)),                 # 21  BUILDER: high steel
@@ -320,7 +320,7 @@ FINALE = [
     C('hockey_2026', 1, fx=dict(COLOR), **{'in': 1.2}),              # 116 ATHLETE: the goalie's gold
     C('coast_guard', 1, fx=dict(COLOR)),                             # 117 WORKER: the rescue swimmer
     C('phelps_2', 1, fx=dict(COLOR)),                                # 118 ATHLETE
-    C('enlist', 1, fx=dict(COLOR), **{'in': 2.0}),                   # 119 SOLDIER
+    C('bailey_harry', 1, alt=[('enlist', 2.0)], fx=dict(COLOR)),     # 119 SOLDIER: Harry Bailey home in his Navy uniform
     C('olympic_extra_2', 1, fx=dict(COLOR)),                         # 120 the flag goes up
     C('firefighters_2', 1, fx=dict(COLOR)),                          # 121 WORKER
     C('kid_flag_alt', 1, fx=dict(COLOR)),                            # 122 FAMILY
@@ -329,10 +329,11 @@ FINALE = [
     C('gabby_2', 1, fx=dict(COLOR)),                                 # 126 ATHLETE
     C('mission_control_2', 1, fx=dict(COLOR)),                       # 127 EXPLORER: task accomplished
     # 128-136: the last sung line, a slower close on each line's last image
-    C('old_guard', 2, fx=dict(COLOR), **{'in': 1.5}),                # 128 SOLDIER
-    C('sweeper_2', 2, alt=[('sweeper', 2.8)] + SWEEP_ALT, fx=dict(COLOR), **{'in': 2.6}),  # 130 WORKER
-    C('lewis_clark', 2, fx=dict(COLOR), fit='cover', zoom=(1.04, 1.0)),  # 132 EXPLORER: Lewis and Clark reach the Pacific
-    C('earthrise', END_AT - 134, fx=dict(COLOR, bloom=0.3), zoom=(1.0, 1.08)),  # 134 Earthrise; the song stops; "Attaboy, Clarence."
+    C('old_guard', 1.5, fx=dict(COLOR), **{'in': 1.5}),              # 128 SOLDIER
+    C('sweeper_2', 1.5, alt=[('sweeper', 2.8)] + SWEEP_ALT, fx=dict(COLOR), **{'in': 2.6}),  # 129.5 WORKER
+    C('lewis_clark', 1.5, fx=dict(COLOR), fit='cover', zoom=(1.04, 1.0)),  # 131 EXPLORER: Lewis and Clark reach the Pacific
+    C('bailey_family', 2, alt=[('dad_kid', 2.0)]),                   # 132.5 FAMILY: George home, his family in his arms
+    C('earthrise', END_AT - 134.5, fx=dict(COLOR, bloom=0.3), zoom=(1.0, 1.08)),  # 134.5 Earthrise; the song stops; "Attaboy, Clarence."
 ]
 # ---- the last ring; the girl answers it (the last shot)
 END = [

@@ -100,6 +100,7 @@ def main():
     ap.add_argument('--start', type=float, default=0.0, help='song time of beat 0 (a downbeat)')
     ap.add_argument('--bpm', type=float)
     ap.add_argument('--hd', action='store_true', help='1920x1080 60fps (default 1280x720 30fps draft)')
+    ap.add_argument('--fps', type=int, help='frame rate override, e.g. 24 for a filmic 720p')
     ap.add_argument('--preview', action='store_true', help='640x360 30fps, fastest')
     ap.add_argument('--placeholder', action='store_true', help='placeholder drums even if the edit names a song')
     ap.add_argument('--vertical', action='store_true', help='9:16')
@@ -109,6 +110,7 @@ def main():
 
     E = load_edit(a.edit)
     W, H, fps = (1920, 1080, 60) if a.hd else (640, 360, 30) if a.preview else (1280, 720, 30)
+    fps = a.fps or fps
     if a.vertical:
         W, H = H, W
     if not a.song and getattr(E, 'SONG', None) and not a.placeholder:

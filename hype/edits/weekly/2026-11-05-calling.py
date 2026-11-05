@@ -215,16 +215,27 @@ ring(47.25)
 MLK_B = 50.2
 vo('mlk_b', MLK_B, gain=1.0, duck=0.4)             # "go out and sweep streets like Michelangelo painted."  (to 56.2)
 ring(56.4, 1)                                      # ... and it cuts him off
-vo('v_great_good', 59.6, gain=1.0, duck=0.4)       # Reagan: "America is good. And if America ever ceases to be good, America will cease to be great."  (to 73.7)
-vo('v_example_tight', 74.5, gain=1.0, duck=0.4)    # Clinton: "People the world over have always been more impressed by the power of our example than by the example of our power."  (to 88.9)
-vo('bailey_live', 90.0, gain=1.1, duck=0.35)       # "I want to live again!" (George on screen for it)
+# Reagan, in three pieces over the working line (the phone cuts in before the last)
+vo('reagan_1', 59.6, gain=1.0, duck=0.4)           # "America is good."                       (to 62.1, on screen)
+vo('reagan_2', 64.1, gain=1.0, duck=0.4)           # "And if America ever ceases to be good,"  (to 68.3)
+ring(68.6)
+vo('reagan_3', 71.5, gain=1.0, duck=0.4)           # "America will cease to be great."         (to 75.2)
+# Clinton, in two, over the presidents and the legends
+vo('clinton_1', 76.0, gain=1.0, duck=0.4)          # "People the world over have always been more impressed by the power of our example"  (to 85.4)
+vo('clinton_2', 86.4, gain=1.0, duck=0.4)          # "than by the example of our power."      (to 91.5)
+vo('bailey_live', 92.0, gain=1.1, duck=0.35)       # "I want to live again!" (George on screen for it)
 vo('miracle_call', 99.6, gain=0.9, duck=0.6)       # "Do you believe in miracles? YES!"
-for at, which, g in ((95.4, 1, 0.5), (112.5, 0, 0.35), (122.2, 1, 0.35), (132.0, 0, 0.35)):
+for at, which, g in ((96.5, 1, 0.5), (113.0, 0, 0.35), (125.0, 1, 0.35), (133.5, 0, 0.35)):
     ring(at, which, gain=g, duck=0.85)             # still ringing, under the music
-vo('liftoff', DROP + 0.4, src_in=5.2, dur=2.3, gain=1.0, duck=0.8)  # "Liftoff! We have a liftoff!"
+# the dividing line: Apollo 11's call on the old rocket, then the new one's
+vo('liftoff', DROP + 0.4, src_in=5.2, dur=2.3, gain=1.0, duck=0.8)  # "Liftoff! We have a liftoff!"       (to 108.1)
+vo('v_artemis_liftoff', DROP + 4.3, gain=1.0, duck=0.6)            # "...and liftoff! The crew of Artemis II, now bound for the Moon."  (to 117.2)
+vo('v_finish_line', 117.4, gain=1.0, duck=0.5)                     # Biden, unseen: "And we own the finish line!" (on Lyles' photo finish)
 vo('bailey_clarence', 137.6, gain=1.0, duck=0.45)  # "Attaboy, Clarence." under the last sung line (heard, not seen)
+# after the song stops, FDR in two pieces over the generation answering now
 FDR_AT = STOP + 0.6
-vo('fdr', FDR_AT, gain=1.0, duck=1.0)              # after the song stops: "This generation of Americans has a rendezvous with destiny."
+vo('fdr_1', FDR_AT, gain=1.0, duck=1.0)            # "This generation of Americans"            (to 148.5)
+vo('fdr_2', FDR_AT + 5.4, gain=1.0, duck=1.0)      # "has a rendezvous with destiny."          (150-156)
 END_AT = 157.0
 vo('phone_ring', END_AT - 0.4, src_in=0.0, dur=2.7, gain=0.9, duck=1.0)  # rings until she lifts the receiver
 
@@ -294,33 +305,33 @@ WORK = [
     C('miners_2', 1.5, alt=[('miners', 1.5)]),                       # 64.1 "And if America ever ceases to be good,"
     C('fishermen', 1.5, **{'in': 0.8}),                              # 65.6 WORKER: a gill net hauled in at sunrise
     C('construction', 1.5),                                          # 67.1 WORKER: a carpenter on the frame
-    C('railroad', 1.5),                                              # 68.6 "America will cease"
+    C('railroad', 1.5),                                              # 68.6 ring
     C('nurse', 1),                                                   # 70.1 FAMILY
     C('workers', 1),                                                 # 71.1 WORKER: the lineman
-    C('steel_3', 1, alt=[('steel', 2.0)]),                           # 72.1 "to be great."
+    C('steel_3', 1, alt=[('steel', 2.0)]),                           # 72.1 "America will cease to be great."
     C('navy', 0.9),                                                  # 73.1 SOLDIER
 ]
 
-# ---- 74-104: the fourth chorus. Clinton over the legends; George Bailey; the firefighters go in; the Miracle
+# ---- 74-104: the fourth chorus. Reagan finishes, Clinton over the legends; George Bailey; the firefighters go in; the Miracle
 LEGENDS = [
-    C('dc_capitol_alt', 1),                                          # 74  the Washington Monument  "People the world over"
+    C('dc_capitol_alt', 1),                                          # 74  the Washington Monument
     C('washington', 2),                                              # 75
-    C('lincoln', 1),                                                 # 77
-    C('teddy', 1, fx=dict(trail=0.3)),                               # 78  "have always been more impressed"
+    C('lincoln', 1),                                                 # 77  "People the world over"
+    C('teddy', 1, fx=dict(trail=0.3)),                               # 78
     C('reagan_wall', 1),                                             # 79
-    C('wright_2', 1),                                                # 80  EXPLORER  "by the power of our example"
-    C('sheen', 1),                                                   # 81  FAMILY / faith
+    C('wright_2', 1),                                                # 80  EXPLORER
+    C('sheen', 1),                                                   # 81  FAMILY / faith  "have always been more impressed"
     C('owens_2', 1),                                                 # 82  ATHLETE: Hayes hits the tape
-    labor(2, 1, ('workers_3', 3.0)),                                 # 83  WORKER  "than by the example"
-    C('vietnam_korea', 1, fx=dict(drift=2)),                         # 84  SOLDIER: the Huey
-    C('armstrong_louis', 1.35),                                      # 85  Louis Armstrong, horn raised  "of our power."
-    C('mj', 1, alt=[('mr_smith', 0.0)]),                             # 86.35 Michael Jackson, the freeze
-    C('peck_hepburn', 1),                                            # 87.35
-    C('welles_2', 0.65),                                             # 88.35
-    C('bailey_2', 1),                                                # 89  George faces the bank run
-    C('bailey_live', 1.65, alt=[('bailey', 0.0)]),                   # 90  George on the bridge: "I want to live again!"
-    C('graham', 1),                                                  # 91.65 FAMILY / faith
-    C('lou_gehrig', 1),                                              # 92.65 ATHLETE
+    labor(2, 1, ('workers_3', 3.0)),                                 # 83  WORKER  "by the power of our example"
+    C('armstrong_louis', 1.35),                                      # 84  Louis Armstrong, horn raised
+    C('mj', 1, alt=[('mr_smith', 0.0)]),                             # 85.35 Michael Jackson, the freeze
+    C('peck_hepburn', 1),                                            # 86.35 "than by the example"
+    C('vietnam_korea', 1, fx=dict(drift=2)),                         # 87.35 SOLDIER: the Huey
+    C('welles_2', 1),                                                # 88.35 "of our power."
+    C('lou_gehrig', 1),                                              # 89.35 ATHLETE
+    C('graham', 0.65),                                               # 90.35 FAMILY / faith
+    C('bailey_2', 1),                                                # 91  George faces the bank run
+    C('bailey_live', 1.65, alt=[('bailey', 0.0)]),                   # 92  George on the bridge: "I want to live again!"
     C('wtc_fdny', 2, alt=[('firefighters_2', 0.0)]),                 # 93.65 WORKER: 9/11, Engine 21 down West Street
     C('wtc_fdny_2', 2, alt=[('firefighters', 0.0)], **{'in': 1.8}),  # 95.65 a rig heads downtown, the towers ahead
     C('wtc_fdny_3', 2, **{'in': 0.3}),                               # 97.65 an Engine 28 firefighter climbs the North Tower stairs
@@ -328,49 +339,45 @@ LEGENDS = [
     *strobe(C('hockey_2026', 1), C('phelps', 1), C('mach_2', 1),     # 101 "YES!" rapid fire
             C('gabby', 1), C('retton', 1), C('us_womens_hockey', 1)),
 ]
-# ---- 104-144: the final chorus, full fidelity, every line pays off in color; the song stops dead at 136
+# ---- 104-144: the final chorus at full fidelity: Americans answering the call now, in color. The song stops at 144.
 FINALE = [
-    C('liftoff', 3, fx=dict(sat=0.0, flame=1.3, bloom=0.45, punch=0.12), mg=[dict(RINGS, cy=0.8, alpha=0.22, period=1.1)]),  # 96 "Liftoff!" the dividing line: black and white, only the flame in color
-    C('mission_control', 1, fx=dict(COLOR)),                         # 99
-    C('mach', 2, fx=dict(COLOR, hue=6)),                             # 100 BUILDER: the Pike takes off
-    C('hockey_2026_2', 1, alt=[('hockey_2026', 2.0)], fx=dict(COLOR)),  # 102 ATHLETE: the golden goal
-    C('salute', 1, fx=dict(COLOR)),                                  # 103 SOLDIER
-    C('wtc_fdny', 2, alt=[('firefighters_2', 1.5)], fx=dict(COLOR), **{'in': 2.2}),  # 104 WORKER: Engine 21 roars past
-    C('alysa_liu', 1, fx=dict(COLOR)),                               # 106 ATHLETE
-    C('kid_flag', 1, fx=dict(COLOR)),                                # 107 FAMILY
-    C('artemis', 2, alt=[('liftoff_2', 0.0)], fx=dict(COLOR, bloom=0.35), **{'in': 1.8}),  # 108 EXPLORER: Artemis II lifts off
-    C('cadets', 1, fx=dict(COLOR)),                                  # 110 SOLDIER: the hat toss
-    C('us_womens_hockey_2', 1, fx=dict(COLOR)),                      # 111 ATHLETE
-    C('spacex', 1, fx=dict(COLOR, bloom=0.3), **{'in': 0.2}),        # 112 BUILDER: the booster lands
-    C('dad_kid_alt', 1, fx=dict(COLOR)),                             # 113 FAMILY
-    C('artemis_2', 2, alt=[('mission_control_2', 0.0)], fx=dict(COLOR), **{'in': 2.3}),  # 114 EXPLORER: the crew waves
-    C('hockey_2026', 1, fx=dict(COLOR), **{'in': 1.2}),              # 116 ATHLETE: the goalie's gold
-    C('coast_guard', 1, fx=dict(COLOR)),                             # 117 WORKER: the rescue swimmer
-    C('phelps_2', 1, fx=dict(COLOR)),                                # 118 ATHLETE
-    C('bailey_harry', 1, alt=[('enlist', 2.0)], fx=dict(COLOR), **{'in': 0.4}),  # 119 SOLDIER: Harry Bailey home in his Navy uniform
-    C('olympic_extra_2', 1, fx=dict(COLOR)),                         # 120 the flag goes up
-    C('firefighters_2', 1, fx=dict(COLOR)),                          # 121 WORKER
-    C('construction_2', 1, fx=dict(COLOR)),                          # 122 WORKER: a rafter swung into place
-    C('artemis_3', 1, fx=dict(COLOR), **{'in': 1.4}),                # 123 EXPLORER: Orion's chutes open, home
-    C('aldrin', 2, fx=dict(COLOR), zoom=(1.0, 1.08)),                # 124 EXPLORER
-    C('fishermen_2', 1, fx=dict(COLOR)),                             # 126 WORKER: the catch
-    C('mission_control_2', 1, fx=dict(COLOR)),                       # 127 EXPLORER: task accomplished
-    # 128-136: the last sung line, a slower close on each line's last image
-    C('old_guard', 1.5, fx=dict(COLOR), **{'in': 1.5}),              # 128 SOLDIER
-    C('sweeper_2', 1.5, alt=[('sweeper', 2.8)] + SWEEP_ALT, fx=dict(COLOR), **{'in': 2.6}),  # 129.5 WORKER   "Attaboy,"
-    C('lewis_clark', 1.5, fx=dict(COLOR), fit='cover', zoom=(1.04, 1.0)),  # 131 EXPLORER: Lewis and Clark reach the Pacific   "Clarence."
-    C('bailey_family', 2, alt=[('dad_kid', 2.0)]),                   # 132.5 FAMILY: George home, his family in his arms
-    C('earthrise', 3, fx=dict(COLOR, bloom=0.3), zoom=(1.0, 1.08)),  # 134.5 Earthrise; the song stops dead at 136
+    C('liftoff', 3, fx=dict(sat=0.0, flame=1.3, bloom=0.45, punch=0.12), mg=[dict(RINGS, cy=0.8, alpha=0.22, period=1.1)]),  # 104 "Liftoff! We have a liftoff!" 1969: black and white, only the flame in color
+    C('artemis', 3, alt=[('liftoff_2', 0.0)], fx=dict(bloom=0.35, punch=0.12), **{'in': 1.2}),  # 107 "...and liftoff!" Artemis II, 2026, in full color
+    C('artemis_2', 2, **{'in': 2.3}),                                # 110 "The crew of Artemis II" waves
+    C('mach', 2, fx=dict(hue=6)),                                    # 112 BUILDER: the Pike takes off  "now bound for the Moon"
+    C('founder', 2, alt=[('jobs', 0.0)]),                            # 114 Ethan Thornton, Mach's all-hands under the flag
+    C('spacex', 1, fx=dict(bloom=0.3), **{'in': 0.2}),               # 116 the booster lands
+    C('gabby_thomas', 2, alt=[('gabby', 0.0)]),                      # 117 Gabby Thomas takes the 200 m  "And we own"
+    C('lyles_3', 2, alt=[('lyles', 0.0)]),                           # 119 Lyles' photo finish  "the finish line!"
+    C('lyles', 1),                                                   # 121 he roars
+    C('olympians_2024', 1),                                          # 122 Simone Biles salutes
+    C('hockey_2026_2', 1, alt=[('hockey_2026', 2.0)]),               # 123 the golden goal
+    C('alysa_liu', 1),                                               # 124 Alysa Liu
+    C('olympians_2024_4', 1.5),                                      # 125 Caroline Marks in the Teahupo'o barrel
+    C('prevost_young', 1.5, alt=[('prevost_young_2', 0.0)]),         # 126.5 young Fr. Prevost (black and white) ...
+    C('pope_leo', 2, alt=[('pope_leo_2', 0.0)]),                     # 128 ... Pope Leo XIV on the loggia
+    C('sheen_2', 1, alt=[('sheen', 1.0)]),                           # 130 Sheen, arm raised (black and white)
+    C('barron', 1),                                                  # 131 Bishop Barron
+    C('moh', 1.5, alt=[('salute', 0.0)]),                            # 132 the Medal of Honor: Sgt. Maj. Thomas Payne
+    C('cadets', 1),                                                  # 133.5 the hat toss
+    C('wtc_fdny', 1, **{'in': 2.2}),                                 # 134.5 Engine 21 roars past
+    C('coast_guard', 0.5),                                           # 135.5 the rescue swimmer
+    # 136-144: the last sung line, a slower close
+    C('old_guard', 1.5, **{'in': 1.5}),                              # 136 the Old Guard in the snow
+    C('fishermen_2', 1.5),                                           # 137.5 the catch  "Attaboy,"
+    C('artemis_3', 1.5, **{'in': 1.4}),                              # 139 Orion's chutes open, home  "Clarence."
+    C('bailey_family', 2, alt=[('dad_kid', 2.0)]),                   # 140.5 George home, his family in his arms (black and white)
+    C('artemis_earth', 3, alt=[('earthrise', 0.0)], fx=dict(bloom=0.3)),  # 142.5 the Earth sets behind the Moon; the song stops dead at 144
 ]
-# ---- 137.5-149: FDR in the silence, over the generation answering now
+# ---- 145.5-157: FDR in the silence, over the generation answering now
 CODA = [
-    C('cadets', 1.5, fx=dict(COLOR), **{'in': 0.2}),                 # 137.5 "This generation"
-    C('alysa_liu_3', 1.5, alt=[('alysa_liu', 0.0)], fx=dict(COLOR)), # 139
-    C('artemis_2', 1.5, fx=dict(COLOR), **{'in': 2.8}),              # 140.5 "of Americans"
-    C('founder', 1.5, alt=[('jobs', 0.0)], fx=dict(COLOR)),          # 142
-    C('olympians_2024', 1.5, alt=[('hockey_2026', 1.5)], fx=dict(COLOR)),  # 143.5 "has a rendezvous"
-    C('kid_flag_alt', 2, fx=dict(COLOR)),                            # 145  "with destiny."
-    C('artemis_earth', 2, alt=[('earthrise', 0.0)], fx=dict(COLOR, bloom=0.3), zoom=(1.0, 1.06)),  # 147
+    C('alysa_liu_3', 1.5, alt=[('alysa_liu', 0.0)]),                 # 145.5 "This generation
+    C('artemis_2', 1.5, **{'in': 2.8}),                              # 147    of Americans"
+    C('founder_2', 1.5, alt=[('founder', 1.5)]),                     # 148.5
+    C('lyles_2', 1.5, alt=[('lyles', 2.0)]),                         # 150   "has a rendezvous
+    C('pope_leo_2', 1.5, alt=[('pope_leo', 1.5)]),                   # 151.5
+    C('kid_flag', 2),                                                # 153    with destiny."
+    C('artemis_earth_2', 2, alt=[('artemis_earth', 1.5)], fx=dict(bloom=0.3)),  # 155
 ]
 # ---- the last ring; the girl answers it (the last shot)
 END_TEXT = os.environ.get('CALL_TEXT', 'Your purpose is calling.')
@@ -378,7 +385,7 @@ END = [
     C('phone_2', 11, speed=0.6, text=[(6.4, END_TEXT, 50, 0.84, 'serif')]),
 ]
 # The first half is black and white; from the liftoff on, everything is in color except deliberate old references.
-OLD_REFS = {'mission_control', 'mission_control_2', 'aldrin', 'earthrise', 'olympic_extra_2', 'dad_kid_alt',
+OLD_REFS = {'prevost_young', 'prevost_young_2', 'prevost_young_3', 'mission_control', 'mission_control_2', 'aldrin', 'earthrise', 'olympic_extra_2', 'dad_kid_alt',
             'construction_2', 'kid_flag_alt', 'sweeper_2', 'lewis_clark', 'bailey_family', 'bailey_harry',
             'sheen', 'sheen_2', 'sheen_3'}
 

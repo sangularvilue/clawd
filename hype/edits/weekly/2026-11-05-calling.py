@@ -390,8 +390,8 @@ FINALE = [
     C('now_farmer', 0.75),                                           # 134.5 the harvest
     C('cadets', 0.75),                                               # 135.25 the hat toss
     # 136-160: the instrumental, the music opening up: this generation, anonymous, under FDR
-    C('anon_welder', 2, **{'in': 0.3}),                              # 136 a young welder, the arc lit
-    C('anon_wedding', 2, **{'in': 0.4}),                             # 138 a wedding kiss under the arbor  "This generation
+    C('anon_welder', 1.5, **{'in': 0.3}),                            # 136 a young welder, the arc lit
+    C('anon_wedding', 2, **{'in': 0.4}),                             # 137.5 a wedding kiss under the arbor  "This generation
     C('anon_baby', 1.5),                                             # 140 a father lifts his newborn         of Americans"
     C('anon_citizens', 2),                                           # 141.5 new citizens take the oath
     C('now_firefighters', 1.5, **{'in': 1.2}),                       # 143.5 firefighters on the line
@@ -401,9 +401,10 @@ FINALE = [
     C('now_police', 2.5),                                            # 149.5 shopping with a cop
     C('anon_volunteers', 2.5, **{'in': 0.5}),                        # 152 neighbors clear the storm
     C('anon_family', 1.5, **{'in': 1.4}),                            # 154.5 a Little Leaguer slides in
-    C('now_builder', 1.5),                                           # 156 the ironworkers top out
-    C('coast_guard', 1.5),                                           # 157.5 the rescue swimmer
-    C('olympians_2024_4', 1),                                        # 159 Caroline Marks in the barrel
+    C('now_builder', 1.25),                                          # 156 the ironworkers top out
+    C('coast_guard', 1.25),                                          # 157.25 the rescue swimmer
+    C('topgun_beach', 1.5, **{'in': 0.45}),                          # 158.5 Top Gun: Maverick, the beach game, a diving tackle at sunset
+    C('olympians_2024_4', 0.5),                                      # 160 Caroline Marks in the barrel
     # 160-168: the last sung line
     C('fishermen_2', 1.5),                                           # 160 the catch  "Attaboy,"
     C('artemis_3', 2, **{'in': 1.4}),                                # 161.5 Orion's chutes open, home  "Clarence."

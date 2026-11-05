@@ -208,7 +208,9 @@ ring(48.4, 1)                                      # ... and it cuts him off
 for at, which, g in ((58.4, 0, 0.5), (82.6, 1, 0.5), (88.6, 0, 0.45),
                      (104.5, 1, 0.35), (114.2, 0, 0.35), (124.0, 1, 0.35)):
     ring(at, which, gain=g, duck=0.85)             # still ringing, under the music
+vo('v_great_good', 51.5, gain=1.0, duck=0.4)       # Reagan: "America is great because she is good."
 vo('fdr', 66.3, duck=0.4)                          # "This generation of Americans has a rendezvous with destiny."
+vo('v_example', 81.6, gain=1.0, duck=0.4)          # Clinton: "...the power of our example..." (over the legends, into the firefighters)
 vo('bailey_live', 78.0, gain=1.1, duck=0.35)       # "I want to live again!" (George on screen for it)
 vo('miracle_call', 91.6, gain=0.9, duck=0.6)       # "Do you believe in miracles? YES!"
 vo('liftoff', DROP + 0.4, src_in=5.2, dur=2.3, gain=1.0, duck=0.8)  # "Liftoff! We have a liftoff!"
@@ -219,7 +221,7 @@ vo('phone_ring', END_AT - 0.4, src_in=0.0, dur=2.7, gain=0.9, duck=1.0)  # rings
 # the chorus of voices: short iconic lines tumbling over each other, low under the working montage after King
 _chorus = [k for k in ('v_teddy', 'v_eagle', 'v_ike_2', 'v_jfk_moon', 'v_ali', 'v_macarthur', 'v_sheen', 'v_graham',
                        'v_rockne', 'v_armstrong', 'v_teddy_2', 'v_ike') if have(k)]
-_at = 52.0
+_at = 56.0 if have('v_great_good') else 52.0
 for k in _chorus:
     d = min(_dur(os.path.join(HERE, media(k))) or 1.5, 2.6)
     if _at + d / BEAT > 65.6:
@@ -308,8 +310,8 @@ LEGENDS = [
     C('bailey_2', 1),                                                # 76  George faces the bank run
     C('vietnam_korea', 1, fx=dict(drift=2)),                         # 77  SOLDIER: the Huey
     C('bailey_live', 1.65, alt=[('bailey', 0.0)]),                   # 78  George on the bridge: "I want to live again!"
-    C('kelly', 1.35),                                                # 79.65
-    C('mr_smith', 1),                                                # 81
+    C('armstrong_louis', 1.35),                                      # 79.65 Louis Armstrong, horn raised
+    C('mj', 1, alt=[('mr_smith', 0.0)]),                             # 81  Michael Jackson, the moonwalk
     C('peck_hepburn', 1),                                            # 82
     C('graham', 1),                                                  # 83  FAMILY / faith
     C('welles_2', 1),                                                # 84

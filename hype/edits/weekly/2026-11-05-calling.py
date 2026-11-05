@@ -396,9 +396,8 @@ FINALE = [
     C('anon_grads', 1.5, **{'in': 0.3}),                             # 145 graduates under the confetti  "has a rendezvous
     C('anon_welder_2', 1.5, **{'in': 1.0}),                          # 146.5 sparks
     C('anon_wedding_2', 1.5),                                        # 148 the toast                          with destiny."
-    C('now_police', 1.5),                                            # 149.5 shopping with a cop
-    C('anon_volunteers', 1.5, **{'in': 0.8}),                        # 151 neighbors clear the storm
-    C('now_arts', 2),                                                # 152.5 Chris Stapleton sings the anthem
+    C('now_police', 2.5),                                            # 149.5 shopping with a cop
+    C('anon_volunteers', 2.5, **{'in': 0.5}),                        # 152 neighbors clear the storm
     C('anon_family', 1.5, **{'in': 1.4}),                            # 154.5 a Little Leaguer slides in
     C('now_builder', 1.5),                                           # 156 the ironworkers top out
     C('coast_guard', 1.5),                                           # 157.5 the rescue swimmer

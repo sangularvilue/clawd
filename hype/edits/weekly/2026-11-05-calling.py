@@ -385,9 +385,10 @@ FINALE = [
     C('moh', 1, alt=[('salute', 0.5)]),                              # 129 the Medal of Honor
     C('barron', 1),                                                  # 130 Bishop Barron
     C('prevost_young', 1, alt=[('prevost_young_2', 0.0)]),           # 131 young Fr. Prevost (black and white) ...
-    C('pope_leo', 1.5, alt=[('pope_leo_2', 0.0)]),                   # 132 ... Pope Leo XIV
-    C('now_farmer', 0.75),                                           # 134.5 the harvest
-    C('cadets', 0.75),                                               # 135.25 the hat toss
+    C('pope_leo', 1, alt=[('pope_leo_2', 0.0)]),                     # 133 ... Pope Leo XIV
+    C('webb_unfold', 1, speed=2.5, **{'in': 2.2}),                   # 134 Webb unfolds its golden mirror in space (NASA animation)
+    C('now_farmer', 0.5),                                            # 135 the harvest
+    C('cadets', 0.5),                                                # 135.5 the hat toss
     # 136-160: the instrumental, the music opening up: this generation, anonymous, under FDR
     C('anon_welder', 1.5, **{'in': 0.3}),                            # 136 a young welder, the arc lit
     C('anon_wedding', 2, **{'in': 0.4}),                             # 137.5 a wedding kiss under the arbor  "This generation

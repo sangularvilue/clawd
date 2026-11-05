@@ -189,7 +189,9 @@ MLK1 = 33.5
 vo('mlk_part1', MLK1, gain=1.0, duck=0.4)          # "Even if it falls your lot to be a street sweeper, go out and sweep streets like Michelangelo painted pictures."
 vo('phone_ring', 47.4, src_in=0.0, dur=1.75, gain=0.8, duck=0.6)   # the pause
 MLK2 = 52.3
-vo('mlk_part2', MLK2, gain=1.0, duck=0.4)          # "Sweep streets so well that all the hosts of heaven and earth will pause and say, Here lived a great street sweeper who swept his job well."
+MLK_HALF = os.environ.get('CALL_MLK', 'full') == 'half'  # half: the first sentence only, a labor montage where the payoff was
+if not MLK_HALF:
+    vo('mlk_part2', MLK2, gain=1.0, duck=0.4)          # "Sweep streets so well that all the hosts of heaven and earth will pause and say, Here lived a great street sweeper who swept his job well."
 vo('fdr', 66.3, duck=0.4)                          # "This generation of Americans has a rendezvous with destiny."
 vo('bailey_live', 78.0, gain=1.1, duck=0.35)       # "I want to live again!" (George on screen for it)
 vo('miracle_call', 91.6, gain=0.9, duck=0.6)       # "Do you believe in miracles? YES!"
@@ -254,9 +256,9 @@ LINES = [
 M1 = [
     C('mlk', 1.5),                                                   # 33.5 "Even if it falls..."
     labor(0, 2.4, ('workers_2', 0.0)),                               # 35  "...your lot to be a"
-    C('sweeper', 1.8, alt=SWEEP_ALT),                                # 37.4 "street sweeper,"
-    C('sweeper_2', 1.4, alt=[('sweeper', 1.8)] + SWEEP_ALT),         # 39.2 "go out and"
-    C('sweeper', 2.0, alt=SWEEP_ALT, **{'in': 1.8}),                 # 40.6 "sweep streets"
+    C('sweeper', 1.8, alt=SWEEP_ALT, **{'in': 0.4}),                 # 37.4 "street sweeper," (St. Louis at dawn)
+    C('sweeper_2', 1.4, alt=[('sweeper', 1.8)] + SWEEP_ALT),         # 39.2 "go out and" (New York's White Wings march out)
+    C('sweeper', 2.0, alt=SWEEP_ALT, **{'in': 2.2}),                 # 40.6 "sweep streets" (the broom drives the litter)
     C('michelangelo', 3.8, alt=[('workers_2', 1.0)], zoom=(1.0, 1.12)),  # 42.6 "like Michelangelo painted pictures."
     C('ford', 1),                                                    # 46.4 BUILDER: the line
     C('marines', 1, fx=dict(drift=3), mg=[RINGS]),                   # 47.4 SOLDIER         (ring)
@@ -266,11 +268,11 @@ M1 = [
     C('dam_2', 0.9, fx=dict(mirror='h')),                            # 51.4 BUILDER
 ]
 M2 = [
-    C('sweeper_2', 2.1, alt=[('sweeper', 2.5)] + SWEEP_ALT, **{'in': 1.5}),  # 52.3 "Sweep streets so well"
+    C('sweeper', 2.1, alt=SWEEP_ALT, **{'in': 1.2}),                 # 52.3 "Sweep streets so well"
     C('heaven', 1.6, alt=[('dc_capitol', 0.5)]),                     # 54.4 "that all the hosts of heaven"
     C('wayne_alt', 0.9),                                             # 56  "and earth"
     C('pause', 2.1, alt=[('jfk_wide_2', 2.0)]),                      # 56.9 "will pause and say,"
-    C('sweeper', 4.2, alt=SWEEP_ALT, **{'in': 0.6}),                 # 59  "Here lived a great street sweeper"
+    C('sweeper', 4.2, alt=SWEEP_ALT, **{'in': 0.3}),                 # 59  "Here lived a great street sweeper"
     labor(1, 2.2, ('workers', 2.0)),                                 # 63.2 "who swept his job well."
     C('navy', 0.6),                                                  # 65.4 SOLDIER
 ]
@@ -320,7 +322,7 @@ FINALE = [
     C('hockey_2026', 1, fx=dict(COLOR), **{'in': 1.2}),              # 116 ATHLETE: the goalie's gold
     C('coast_guard', 1, fx=dict(COLOR)),                             # 117 WORKER: the rescue swimmer
     C('phelps_2', 1, fx=dict(COLOR)),                                # 118 ATHLETE
-    C('bailey_harry', 1, alt=[('enlist', 2.0)], fx=dict(COLOR)),     # 119 SOLDIER: Harry Bailey home in his Navy uniform
+    C('bailey_harry', 1, alt=[('enlist', 2.0)], fx=dict(COLOR), **{'in': 0.4}),  # 119 SOLDIER: Harry Bailey home in his Navy uniform
     C('olympic_extra_2', 1, fx=dict(COLOR)),                         # 120 the flag goes up
     C('firefighters_2', 1, fx=dict(COLOR)),                          # 121 WORKER
     C('kid_flag_alt', 1, fx=dict(COLOR)),                            # 122 FAMILY
@@ -339,7 +341,20 @@ FINALE = [
 END = [
     C('phone_2', 11, speed=0.6, text=[(6.4, 'Your country is calling.', 50, 0.84, 'serif')]),
 ]
-SEQ = OPEN + LINES + M1 + M2 + LEGENDS + FINALE + END
+M2_HALF = [  # 52.3-66: no payoff; the working line carries on under the music
+    C('steel', 1.5),                                                 # 52.3 WORKER
+    C('babe_ruth_alt', 1),                                           # 53.8 ATHLETE
+    C('loggers', 1.5),                                               # 54.8 WORKER
+    C('salk_2', 1),                                                  # 56.3 FAMILY: the polio shots
+    C('miners_2', 1.5, alt=[('miners', 1.5)]),                       # 57.3 WORKER
+    C('air_force', 1),                                               # 58.8 SOLDIER
+    C('steel_2', 1.5, alt=[('steel', 2.0)]),                         # 59.8 WORKER
+    C('einstein', 1),                                                # 61.3 EXPLORER
+    C('loggers_2', 1.5, alt=[('loggers', 2.0)]),                     # 62.3 WORKER
+    C('teacher', 1),                                                 # 63.8 FAMILY
+    C('miners_3', 1.2, alt=[('miners', 2.5)]),                       # 64.8 WORKER
+]
+SEQ = OPEN + LINES + M1 + (M2_HALF if MLK_HALF else M2) + LEGENDS + FINALE + END
 
 if __name__ == '__main__':
     import sys

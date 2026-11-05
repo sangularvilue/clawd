@@ -376,9 +376,9 @@ FINALE = [
     C('lyles_3', 2, alt=[('lyles', 0.0)]),                           # 119 Lyles' photo finish  "the finish line!"
     C('lyles', 1),                                                   # 121 he roars
     C('olympians_2024', 1),                                          # 122 Simone Biles
-    C('now_nurse', 1),                                               # 123 nurses walk out through the applause
+    C('now_nurse_2', 1, alt=[('now_nurse', 0.0)]),                   # 123 a young nurse at work
     C('now_lineman', 1),                                             # 124 linemen bring the power back
-    C('now_teacher', 1),                                             # 125 a teacher reads to her class
+    C('now_teacher_2', 1, alt=[('now_teacher', 0.0)]),               # 125 a young teacher with her class
     C('now_troops', 1),                                              # 126 a sailor home from the sea
     C('hockey_2026_2', 1, alt=[('hockey_2026', 2.0)]),               # 127 the golden goal
     C('alysa_liu', 1),                                               # 128 Alysa Liu

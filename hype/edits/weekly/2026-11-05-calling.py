@@ -356,8 +356,9 @@ FINALE = [
     C('earthrise', END_AT - 134.5, fx=dict(COLOR, bloom=0.3), zoom=(1.0, 1.08)),  # 134.5 Earthrise; the song stops
 ]
 # ---- the last ring; the girl answers it (the last shot)
+END_TEXT = os.environ.get('CALL_TEXT', 'Your country is calling.')
 END = [
-    C('phone_2', 11, speed=0.6, text=[(6.4, 'Your country is calling.', 50, 0.84, 'serif')]),
+    C('phone_2', 11, speed=0.6, text=[(6.4, END_TEXT, 50, 0.84, 'serif')]),
 ]
 SEQ = OPEN + LINES + M1 + WORK + LEGENDS + FINALE + END
 

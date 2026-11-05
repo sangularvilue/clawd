@@ -225,13 +225,15 @@ vo('clinton_1', 76.0, gain=1.0, duck=0.4)          # "People the world over have
 vo('clinton_2', 86.4, gain=1.0, duck=0.4)          # "than by the example of our power."      (to 91.5)
 vo('bailey_live', 92.0, gain=1.1, duck=0.35)       # "I want to live again!" (George on screen for it)
 vo('miracle_call', 99.6, gain=0.9, duck=0.6)       # "Do you believe in miracles? YES!"
-for at, which, g in ((96.5, 1, 0.5), (113.0, 0, 0.35), (125.0, 1, 0.35), (133.5, 0, 0.35)):
+for at, which, g in ((96.5, 1, 0.5), (113.0, 0, 0.35), (124.6, 1, 0.35)):
     ring(at, which, gain=g, duck=0.85)             # still ringing, under the music
 # the dividing line: Apollo 11's call on the old rocket, then the new one's
 vo('liftoff', DROP + 0.4, src_in=5.2, dur=2.3, gain=1.0, duck=0.8)  # "Liftoff! We have a liftoff!"       (to 108.1)
 vo('v_artemis_liftoff', DROP + 4.3, gain=1.0, duck=0.6)            # "...and liftoff! The crew of Artemis II, now bound for the Moon."  (to 117.2)
 vo('v_finish_line', 117.4, gain=1.0, duck=0.5)                     # Biden, unseen: "And we own the finish line!" (on Lyles' photo finish)
-vo('bailey_clarence', 137.6, gain=1.0, duck=0.45)  # "Attaboy, Clarence." under the last sung line (heard, not seen)
+vo('sheen_up_a', 130.0, gain=1.0, duck=0.45)       # Sheen, on screen: "Let's begin now to use the word up."
+vo('sheen_up_b', 133.6, gain=1.05, duck=0.45)      # ... pointing straight up: "Up, up, to God."   (to 137.7)
+vo('bailey_clarence', 137.8, gain=1.0, duck=0.45)  # "Attaboy, Clarence." under the last sung line (heard, not seen)
 # after the song stops, FDR in two pieces over the generation answering now
 FDR_AT = STOP + 0.6
 vo('fdr_1', FDR_AT, gain=1.0, duck=1.0)            # "This generation of Americans"            (to 148.5)
@@ -353,17 +355,13 @@ FINALE = [
     C('olympians_2024', 1),                                          # 122 Simone Biles salutes
     C('hockey_2026_2', 1, alt=[('hockey_2026', 2.0)]),               # 123 the golden goal
     C('alysa_liu', 1),                                               # 124 Alysa Liu
-    C('olympians_2024_4', 1.5),                                      # 125 Caroline Marks in the Teahupo'o barrel
-    C('prevost_young', 1.5, alt=[('prevost_young_2', 0.0)]),         # 126.5 young Fr. Prevost (black and white) ...
-    C('pope_leo', 2, alt=[('pope_leo_2', 0.0)]),                     # 128 ... Pope Leo XIV on the loggia
-    C('sheen_2', 1, alt=[('sheen', 1.0)]),                           # 130 Sheen, arm raised (black and white)
-    C('barron', 1),                                                  # 131 Bishop Barron
-    C('moh', 1.5, alt=[('salute', 0.0)]),                            # 132 the Medal of Honor: Sgt. Maj. Thomas Payne
-    C('cadets', 1),                                                  # 133.5 the hat toss
-    C('wtc_fdny', 1, **{'in': 2.2}),                                 # 134.5 Engine 21 roars past
-    C('coast_guard', 0.5),                                           # 135.5 the rescue swimmer
+    C('moh', 1, alt=[('salute', 0.0)]),                              # 125 the Medal of Honor: Sgt. Maj. Thomas Payne
+    C('barron', 1),                                                  # 126 Bishop Barron
+    C('prevost_young', 1.25, alt=[('prevost_young_2', 0.0)]),        # 127 young Fr. Prevost (black and white) ...
+    C('pope_leo', 1.75, alt=[('pope_leo_2', 0.0)]),                  # 128.25 ... Pope Leo XIV on the loggia
+    C('sheen_up', 3.5),                                              # 130 Sheen (black and white): "Let's begin now to use the word up."
+    C('sheen_up', 4, **{'in': 11.4}),                                # 133.5 he points straight up: "Up, up, to God."
     # 136-144: the last sung line, a slower close
-    C('old_guard', 1.5, **{'in': 1.5}),                              # 136 the Old Guard in the snow
     C('fishermen_2', 1.5),                                           # 137.5 the catch  "Attaboy,"
     C('artemis_3', 1.5, **{'in': 1.4}),                              # 139 Orion's chutes open, home  "Clarence."
     C('bailey_family', 2, alt=[('dad_kid', 2.0)]),                   # 140.5 George home, his family in his arms (black and white)
@@ -375,7 +373,7 @@ CODA = [
     C('artemis_2', 1.5, **{'in': 2.8}),                              # 147    of Americans"
     C('founder_2', 1.5, alt=[('founder', 1.5)]),                     # 148.5
     C('lyles_2', 1.5, alt=[('lyles', 2.0)]),                         # 150   "has a rendezvous
-    C('pope_leo_2', 1.5, alt=[('pope_leo', 1.5)]),                   # 151.5
+    C('old_guard', 1.5, **{'in': 1.5}),                              # 151.5 the Old Guard in the snow
     C('kid_flag', 2),                                                # 153    with destiny."
     C('artemis_earth_2', 2, alt=[('artemis_earth', 1.5)], fx=dict(bloom=0.3)),  # 155
 ]
@@ -387,7 +385,7 @@ END = [
 # The first half is black and white; from the liftoff on, everything is in color except deliberate old references.
 OLD_REFS = {'prevost_young', 'prevost_young_2', 'prevost_young_3', 'mission_control', 'mission_control_2', 'aldrin', 'earthrise', 'olympic_extra_2', 'dad_kid_alt',
             'construction_2', 'kid_flag_alt', 'sweeper_2', 'lewis_clark', 'bailey_family', 'bailey_harry',
-            'sheen', 'sheen_2', 'sheen_3'}
+            'sheen', 'sheen_2', 'sheen_3', 'sheen_up'}
 
 
 def era(items):

@@ -231,7 +231,6 @@ for at, which, g in ((96.5, 1, 0.5), (113.0, 0, 0.35), (124.6, 1, 0.35)):
 vo('liftoff', DROP + 0.4, src_in=5.2, dur=2.3, gain=1.0, duck=0.8)  # "Liftoff! We have a liftoff!"       (to 108.1)
 vo('v_artemis_liftoff', DROP + 4.3, gain=1.0, duck=0.6)            # "...and liftoff! The crew of Artemis II, now bound for the Moon."  (to 117.2)
 vo('v_finish_line', 117.4, gain=1.0, duck=0.5)                     # Biden, unseen: "And we own the finish line!" (on Lyles' photo finish)
-vo('sheen_up_a', 130.0, gain=1.0, duck=0.45)       # Sheen, on screen: "Let's begin now to use the word up."
 vo('sheen_up_b', 133.6, gain=1.05, duck=0.45)      # ... pointing straight up: "Up, up, to God."   (to 137.7)
 vo('bailey_clarence', 137.8, gain=1.0, duck=0.45)  # "Attaboy, Clarence." under the last sung line (heard, not seen)
 # after the song stops, FDR in two pieces over the generation answering now
@@ -356,11 +355,13 @@ FINALE = [
     C('hockey_2026_2', 1, alt=[('hockey_2026', 2.0)]),               # 123 the golden goal
     C('alysa_liu', 1),                                               # 124 Alysa Liu
     C('moh', 1, alt=[('salute', 0.0)]),                              # 125 the Medal of Honor: Sgt. Maj. Thomas Payne
-    C('barron', 1),                                                  # 126 Bishop Barron
-    C('prevost_young', 1.25, alt=[('prevost_young_2', 0.0)]),        # 127 young Fr. Prevost (black and white) ...
-    C('pope_leo', 1.75, alt=[('pope_leo_2', 0.0)]),                  # 128.25 ... Pope Leo XIV on the loggia
-    C('sheen_up', 3.5),                                              # 130 Sheen (black and white): "Let's begin now to use the word up."
-    C('sheen_up', 4, **{'in': 11.4}),                                # 133.5 he points straight up: "Up, up, to God."
+    C('cadets', 1),                                                  # 126 the hat toss
+    C('olympians_2024_4', 1.5),                                      # 127 Caroline Marks in the Teahupo'o barrel
+    C('coast_guard', 1),                                             # 128.5 the rescue swimmer
+    C('barron', 1),                                                  # 129.5 Bishop Barron
+    C('prevost_young', 1.25, alt=[('prevost_young_2', 0.0)]),        # 130.5 young Fr. Prevost (black and white) ...
+    C('pope_leo', 1.75, alt=[('pope_leo_2', 0.0)]),                  # 131.75 ... Pope Leo XIV on the loggia
+    C('sheen_up', 4, **{'in': 11.4}),                                # 133.5 Sheen (black and white) points straight up: "Up, up, to God."
     # 136-144: the last sung line, a slower close
     C('fishermen_2', 1.5),                                           # 137.5 the catch  "Attaboy,"
     C('artemis_3', 1.5, **{'in': 1.4}),                              # 139 Orion's chutes open, home  "Clarence."

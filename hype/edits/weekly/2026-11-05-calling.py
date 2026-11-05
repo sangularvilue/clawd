@@ -32,7 +32,7 @@ HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 P = 'call_'
 BPM = 97.5
 BEAT = 60 / BPM
-SONG_VERSION = os.environ.get('CALL_SONG', 'orig')  # orig | orig_m2 (a whole step down) | orig_p1 (a half step up) | organ
+SONG_VERSION = os.environ.get('CALL_SONG', 'orig_lift')  # orig_lift | orig | orig_m2 (a whole step down) | orig_p1 | organ
 SONG = 'media/call_song_%s.wav' % SONG_VERSION
 SONG_START = 0.0
 DROP = 96
@@ -53,6 +53,9 @@ BEDS = {
     'orig': dict(segments=[(281, 308), (316, 417), (473, 485)], vocals_db=-6.0, pitch=0),
     'orig_m2': dict(segments=[(281, 308), (316, 417), (473, 485)], vocals_db=-6.0, pitch=-2),
     'orig_p1': dict(segments=[(281, 308), (316, 417), (473, 485)], vocals_db=-6.0, pitch=1),
+    # a whole step down until the final chorus, then up to the record's own key on its downbeat (just before
+    # "I grieve in stereo"): a key-change lift into the payoff, on the same beat the lo-fi opens up
+    'orig_lift': dict(segments=[(281, 308), (316, 417), (473, 485)], vocals_db=-6.0, pitch=-2, pitch_until=96),
     'organ': dict(segments=[(281, 308), (316, 417), (481, None)], src='out/lda_score_organ.wav'),
 }
 
@@ -84,12 +87,22 @@ def make_bed(version=SONG_VERSION, xfade=0.03):
         y = y * (0.98 / pk)
     out = os.path.join(HERE, 'media', 'call_song_%s.wav' % version)
     sf.write(out, y, sr, subtype='PCM_24')
-    if cfg.get('pitch'):  # key shift, tempo kept (Rubber Band, formants preserved for the voice)
+    if cfg.get('pitch'):  # key shift, tempo kept (Rubber Band, formants preserved for the voice; it adds < 3 ms)
         tmp = out + '.tmp.wav'
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', out, '-af',
                         'rubberband=pitch=%f:pitchq=quality:transients=mixed:formant=preserved' % 2 ** (cfg['pitch'] / 12),
                         '-c:a', 'pcm_s24le', tmp], check=True)
-        os.replace(tmp, out)
+        if cfg.get('pitch_until') is not None:  # shifted up to that beat of the edit, the original key after it
+            z, _ = sf.read(tmp, dtype='float32')
+            z = z[:len(y)]
+            k = int(round(cfg['pitch_until'] * BEAT * sr))
+            nz = int(0.02 * sr)
+            r = np.linspace(0, 1, nz)[:, None]
+            y = np.concatenate([z[:k - nz], z[k - nz:k] * (1 - r) + y[k - nz:k] * r, y[k:]])
+            sf.write(out, y, sr, subtype='PCM_24')
+            os.remove(tmp)
+        else:
+            os.replace(tmp, out)
     return len(y) / sr
 
 

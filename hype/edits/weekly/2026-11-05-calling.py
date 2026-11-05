@@ -212,8 +212,8 @@ vo('fdr', 66.3, duck=0.4)                          # "This generation of America
 vo('bailey_live', 78.0, gain=1.1, duck=0.35)       # "I want to live again!" (George on screen for it)
 vo('miracle_call', 91.6, gain=0.9, duck=0.6)       # "Do you believe in miracles? YES!"
 vo('liftoff', DROP + 0.4, src_in=5.2, dur=2.3, gain=1.0, duck=0.8)  # "Liftoff! We have a liftoff!"
-vo('bailey_clarence', STOP + 0.6, gain=1.0, duck=1.0)  # "Attaboy, Clarence." (heard, not seen)
-END_AT = 139.0
+vo('bailey_clarence', 129.6, gain=1.0, duck=0.45)  # "Attaboy, Clarence." under the last sung line (heard, not seen)
+END_AT = 137.4
 vo('phone_ring', END_AT - 0.4, src_in=0.0, dur=2.7, gain=0.9, duck=1.0)  # rings until she lifts the receiver
 
 # the chorus of voices: short iconic lines tumbling over each other, low under the working montage after King
@@ -350,10 +350,10 @@ FINALE = [
     C('mission_control_2', 1, fx=dict(COLOR)),                       # 127 EXPLORER: task accomplished
     # 128-136: the last sung line, a slower close on each line's last image
     C('old_guard', 1.5, fx=dict(COLOR), **{'in': 1.5}),              # 128 SOLDIER
-    C('sweeper_2', 1.5, alt=[('sweeper', 2.8)] + SWEEP_ALT, fx=dict(COLOR), **{'in': 2.6}),  # 129.5 WORKER
-    C('lewis_clark', 1.5, fx=dict(COLOR), fit='cover', zoom=(1.04, 1.0)),  # 131 EXPLORER: Lewis and Clark reach the Pacific
+    C('sweeper_2', 1.5, alt=[('sweeper', 2.8)] + SWEEP_ALT, fx=dict(COLOR), **{'in': 2.6}),  # 129.5 WORKER   "Attaboy,"
+    C('lewis_clark', 1.5, fx=dict(COLOR), fit='cover', zoom=(1.04, 1.0)),  # 131 EXPLORER: Lewis and Clark reach the Pacific   "Clarence."
     C('bailey_family', 2, alt=[('dad_kid', 2.0)]),                   # 132.5 FAMILY: George home, his family in his arms
-    C('earthrise', END_AT - 134.5, fx=dict(COLOR, bloom=0.3), zoom=(1.0, 1.08)),  # 134.5 Earthrise; the song stops; "Attaboy, Clarence."
+    C('earthrise', END_AT - 134.5, fx=dict(COLOR, bloom=0.3), zoom=(1.0, 1.08)),  # 134.5 Earthrise; the song stops
 ]
 # ---- the last ring; the girl answers it (the last shot)
 END = [

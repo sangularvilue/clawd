@@ -284,11 +284,11 @@ WORK = [
     C('ali', 1),                                                     # 53.6 ATHLETE
     C('miners_2', 1.5, alt=[('miners', 1.5)]),                       # 54.6 WORKER
     C('dad_kid', 1),                                                 # 56.1 FAMILY: grace at the table
-    C('steel_2', 1.5, alt=[('steel', 2.0)]),                         # 57.1 WORKER
+    C('fishermen', 1.5, **{'in': 0.8}),                              # 57.1 WORKER: a gill net hauled in at sunrise
     C('doughboys', 1, fx=dict(trail=0.35)),                          # 58.6 SOLDIER
-    C('loggers_2', 1.5, alt=[('loggers', 2.0)]),                     # 59.6 WORKER
+    C('construction', 1.5),                                          # 59.6 WORKER: a carpenter on the frame
     C('wright', 1),                                                  # 61.1 EXPLORER: the Flyer
-    C('miners_3', 1.5, alt=[('miners', 2.5)]),                       # 62.1 WORKER
+    C('railroad', 1.5),                                              # 62.1 WORKER: the section gang
     C('nurse', 1),                                                   # 63.6 FAMILY
     C('workers', 0.8),                                               # 64.6 WORKER: the lineman
     C('navy', 0.6),                                                  # 65.4 SOLDIER
@@ -343,10 +343,10 @@ FINALE = [
     C('bailey_harry', 1, alt=[('enlist', 2.0)], fx=dict(COLOR), **{'in': 0.4}),  # 119 SOLDIER: Harry Bailey home in his Navy uniform
     C('olympic_extra_2', 1, fx=dict(COLOR)),                         # 120 the flag goes up
     C('firefighters_2', 1, fx=dict(COLOR)),                          # 121 WORKER
-    C('kid_flag_alt', 1, fx=dict(COLOR)),                            # 122 FAMILY
+    C('construction_2', 1, fx=dict(COLOR)),                          # 122 WORKER: a rafter swung into place
     C('artemis_3', 1, fx=dict(COLOR), **{'in': 1.4}),                # 123 EXPLORER: Orion's chutes open, home
     C('aldrin', 2, fx=dict(COLOR), zoom=(1.0, 1.08)),                # 124 EXPLORER
-    C('gabby_2', 1, fx=dict(COLOR)),                                 # 126 ATHLETE
+    C('fishermen_2', 1, fx=dict(COLOR)),                             # 126 WORKER: the catch
     C('mission_control_2', 1, fx=dict(COLOR)),                       # 127 EXPLORER: task accomplished
     # 128-136: the last sung line, a slower close on each line's last image
     C('old_guard', 1.5, fx=dict(COLOR), **{'in': 1.5}),              # 128 SOLDIER

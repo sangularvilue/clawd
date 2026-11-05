@@ -51,7 +51,7 @@ def play_order(n_bars, repeats=()):
     return order
 
 
-def score_events(bars, vocal, five, bpm, repeats=()):
+def score_events(bars, vocal, five, bpm, repeats=(), hollow_ties=True):
     """Melody (top RH note per onset), the RH chord under each melody note, all RH notes,
     and each bar's start (the last pass, for repeated bars), in score seconds."""
     beat = 60.0 / bpm
@@ -76,7 +76,7 @@ def score_events(bars, vocal, five, bpm, repeats=()):
             for c in clusters:
                 filled = [n for n in c if n['head'] == 'filled']
                 prev_top = onsets[-1][1] if onsets else (melody[-1][2] if melody else None)
-                if not filled and prev_top is not None and any((n['midi'] - prev_top) % 12 == 0 for n in c):
+                if hollow_ties and not filled and prev_top is not None and any((n['midi'] - prev_top) % 12 == 0 for n in c):
                     continue  # a half note tied from the previous note: hold it, don't re-strike
                 c = filled or c  # a hollow "head" beside filled ones is an enclosed gap, not a note
                 x = np.mean([n['x'] for n in c])
@@ -176,7 +176,7 @@ def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True, fix
     secs = [s for s in secs if s]
     ks = range(-8, 41)
     kg = max(ks, key=lambda k: sum(match(s, k) for s in secs))
-    out, report, pinned = [], [], set()
+    out, report, pinned, tied = [], [], set(), set()
     offsets = offsets or {}  # {first bar of a section: beats}, for arrangements that cut or stretch sections
     for sec in secs:
         scores = {k: match(sec, k) for k in ks}
@@ -195,7 +195,14 @@ def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True, fix
                       % (b, len(idx), len(fixed[b])))
                 continue
             b0 = starts[b] / slot + 4 * k
-            for i, (sl, ln) in zip(idx, fixed[b]):
+            prev_end = None
+            for i, ent in zip(idx, fixed[b]):
+                if ent[0] == 'tie':  # a tied note: held on from the previous one, not struck again
+                    sl, ln = prev_end, ent[1]
+                    tied.add(id(sec[i]))
+                else:
+                    sl, ln = ent
+                prev_end = sl + ln
                 p[i], pe[i], cand[i] = b0 + sl, b0 + sl + ln, [int(round(b0 + sl))]
                 pinned.add(id(sec[i]))
         grid = lambda j: 0.35 if j % 4 == 0 else 0.15 if j % 2 == 0 else 0.0
@@ -230,6 +237,9 @@ def align_grid(melody, sections, feats, phase, beat, window=4, sustain=True, fix
             end = pe[i] + shift
             if i + 1 < n:
                 end = min(max(end, j + 1), js[i + 1])
+            if id(x) in tied and out:
+                out[-1][1] = phase + max(j + 1, pe[i] + shift) * slot
+                continue
             out.append([phase + j * slot, phase + max(j + 1, end) * slot, x[2], x[3], index[id(x)]])
     out.sort(key=lambda x: x[0])
     for i, x in enumerate(out if sustain else []):  # hold through the singer's sustain (ties across barlines aren't read)
@@ -458,7 +468,7 @@ def main():
     stems = organ.separate(a.song, cache)
     bars = json.load(open(a.score))
     melody, allrh, chords, starts = score_events(bars, ranges(a.vocal_bars), ranges(a.five_four), a.bpm,
-                                                 [tuple(r) for r in cfg.get('repeats', [])])
+                                                 [tuple(r) for r in cfg.get('repeats', [])], cfg.get('hollow_ties', True))
     secs = []
     for part in filter(None, (a.sections or a.vocal_bars).split(',')):
         lo, _, hi = part.partition('-')

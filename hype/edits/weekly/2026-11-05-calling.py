@@ -36,7 +36,7 @@ SONG_VERSION = os.environ.get('CALL_SONG', 'orig_lift')  # orig_lift | orig | or
 SONG = 'media/call_song_%s.wav' % SONG_VERSION
 SONG_START = 0.0
 DROP = 104
-STOP = 144  # the song's last chord cuts off here (the organ version rings a closing chord instead)
+STOP = 168  # the song's last chord cuts off here (the organ version rings a closing chord instead)
 LOFI = dict(until=DROP, cutoff=2300, hp=170)
 FX = dict(sat=0.0, chroma=3, shake=4, punch=0.04)  # black-and-white unless a shot says otherwise
 COLOR = dict(sat=1.05)
@@ -50,13 +50,14 @@ COLOR = dict(sat=1.05)
 BED_PHASE = 0.245
 STEMS = 'media/organ_cache/1416f0ad1406'  # Demucs stems of media/raw/organ_lda/lda.mp3
 BEDS = {
-    'orig': dict(segments=[(281, 417), (473, 485)], vocals_db=-6.0, pitch=0),
-    'orig_m2': dict(segments=[(281, 417), (473, 485)], vocals_db=-6.0, pitch=-2),
-    'orig_p1': dict(segments=[(281, 417), (473, 485)], vocals_db=-6.0, pitch=1),
+    'orig': dict(segments=[(281, 441), (473, 485)], vocals_db=-6.0, pitch=0),
+    'orig_m2': dict(segments=[(281, 441), (473, 485)], vocals_db=-6.0, pitch=-2),
+    'orig_p1': dict(segments=[(281, 441), (473, 485)], vocals_db=-6.0, pitch=1),
     # a whole step down until the final chorus, then up to the record's own key on its downbeat (just before
     # "I grieve in stereo"): a key-change lift into the payoff, on the same beat the lo-fi opens up
-    'orig_lift': dict(segments=[(281, 417), (473, 485)], vocals_db=-6.0, pitch=-2, pitch_until=104),
-    'organ': dict(segments=[(281, 417), (481, None)], src='out/lda_score_organ.wav'),
+    'orig_lift': dict(segments=[(281, 441), (473, 485)], vocals_db=-6.0, pitch=-2, pitch_until=104,
+                      cosmic=dict(after=104, reverb_db=-7.5, shimmer_db=-12, width=1.6, low_db=3.0, air_db=3.5)),
+    'organ': dict(segments=[(281, 441), (481, None)], src='out/lda_score_organ.wav'),
 }
 
 
@@ -103,6 +104,32 @@ def make_bed(version=SONG_VERSION, xfade=0.03):
             os.remove(tmp)
         else:
             os.replace(tmp, out)
+    if cfg.get('cosmic'):  # after the key change: a long hall, the hall an octave up, wider, more air and weight
+        import sys
+        sys.path.insert(0, HERE)
+        import organ
+        from scipy.signal import butter, sosfiltfilt
+        from score_organ import limit
+        c = cfg['cosmic']
+        y, sr = sf.read(out, dtype='float32')
+        k = int(round(c['after'] * BEAT * sr))
+        post = y[k:]
+        wet = organ.cathedral(post.T.copy(), rt60=6.5, wet=1.0, hp=300.0).T / 2.2
+        tw, ts = out + '.wet.wav', out + '.shim.wav'
+        sf.write(tw, wet, sr, subtype='FLOAT')
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', tw, '-af', 'rubberband=pitch=2.0:pitchq=quality,highpass=f=900,lowpass=f=12000', ts], check=True)
+        shim = sf.read(ts, dtype='float32')[0][:len(wet)]
+        os.remove(tw), os.remove(ts)
+        z = post + wet * 10 ** (c['reverb_db'] / 20) + shim * 10 ** (c['shimmer_db'] / 20)
+        m, sd = (z[:, 0] + z[:, 1]) / 2, (z[:, 0] - z[:, 1]) / 2 * c['width']
+        z = np.stack([m + sd, m - sd], 1)
+        lo = sosfiltfilt(butter(2, 90, 'lowpass', fs=sr, output='sos'), z, axis=0)
+        hi = sosfiltfilt(butter(2, 9000, 'highpass', fs=sr, output='sos'), z, axis=0)
+        z = z + lo * (10 ** (c['low_db'] / 20) - 1) + hi * (10 ** (c['air_db'] / 20) - 1)
+        r = np.linspace(0, 1, int(0.25 * sr))[:, None]  # it blooms in on the downbeat
+        z[:len(r)] = post[:len(r)] * (1 - r) + z[:len(r)] * r
+        y = limit(np.concatenate([y[:k], z]).T * 10 ** (-1.5 / 20), ceiling=0.97).T
+        sf.write(out, y, sr, subtype='PCM_24')
     return len(y) / sr
 
 
@@ -225,17 +252,17 @@ vo('reagan_3', 71.5, gain=1.0, duck=0.4)           # "America will cease to be g
 vo('clinton', 76.0, gain=1.0, duck=0.4)            # "People the world over have always been more impressed by the power of our example than by the example of our power."  (to 91.1)
 vo('bailey_live', 92.0, gain=1.1, duck=0.35)       # "I want to live again!" (George on screen for it)
 vo('miracle_call', 99.6, gain=0.9, duck=0.6)       # "Do you believe in miracles? YES!"
-for at, which, g in ((96.5, 1, 0.5), (113.0, 0, 0.35), (134.7, 1, 0.35)):
+for at, which, g in ((96.5, 1, 0.5), (113.0, 0, 0.35), (134.7, 1, 0.35), (152.0, 0, 0.35)):
     ring(at, which, gain=g, duck=0.85)             # still ringing, under the music
 # the dividing line: Apollo 11's call on the old rocket, then the new one's
 vo('liftoff', DROP + 0.4, src_in=5.2, dur=2.3, gain=1.0, duck=0.8)  # "Liftoff! We have a liftoff!"       (to 108.1)
 vo('v_artemis_liftoff', DROP + 4.3, gain=1.0, duck=0.6)            # "...and liftoff! The crew of Artemis II, now bound for the Moon."  (to 117.2)
 vo('v_finish_line', 117.4, gain=1.0, duck=0.5)                     # Biden, unseen: "And we own the finish line!" (on Lyles' photo finish)
-vo('bailey_clarence', 137.8, gain=1.0, duck=0.45)  # "Attaboy, Clarence." under the last sung line (heard, not seen)
+vo('bailey_clarence', 160.6, gain=1.0, duck=0.45)  # "Attaboy, Clarence." under the last sung line (heard, not seen)
 # FDR, in two pieces, over the generation answering now
-vo('fdr_1', 123.0, gain=1.0, duck=0.45)            # "This generation of Americans"            (to 126.9)
-vo('fdr_2', 128.4, gain=1.0, duck=0.45)            # "has a rendezvous with destiny."          (to 134.4)
-END_AT = 145.0
+vo('fdr_1', 138.2, gain=1.0, duck=0.45)            # over the instrumental: "This generation of Americans"  (to 142.1)
+vo('fdr_2', 145.0, gain=1.0, duck=0.45)            # "has a rendezvous with destiny."          (to 151.0)
+END_AT = 169.0
 vo('phone_ring', END_AT - 0.3, src_in=0.0, dur=4.05, gain=0.9, duck=1.0)  # the last ring, twice; she reaches, and we stop before she answers
 
 # ---------------------------------------------------------------- picture
@@ -335,7 +362,7 @@ LEGENDS = [
     *strobe(C('hockey_2026', 1), C('phelps', 1), C('mach_2', 1),     # 101 "YES!" rapid fire
             C('gabby', 1), C('retton', 1), C('us_womens_hockey', 1)),
 ]
-# ---- 104-144: the final chorus at full fidelity: Americans answering the call now, in color. The song stops at 144.
+# ---- 104-168: the final chorus at full fidelity: Americans answering the call now, in color; the instrumental; the last line. The song stops at 168.
 FINALE = [
     C('liftoff', 3, fx=dict(bloom=0.4, punch=0.12), mg=[dict(RINGS, cy=0.8, alpha=0.22, period=1.1)]),  # 104 "Liftoff! We have a liftoff!" (1969)
     C('artemis', 3, alt=[('liftoff_2', 0.0)], fx=dict(bloom=0.35, punch=0.12), **{'in': 1.2}),  # 107 "...and liftoff! The crew of Artemis II"
@@ -347,25 +374,40 @@ FINALE = [
     C('lyles_3', 2, alt=[('lyles', 0.0)]),                           # 119 Lyles' photo finish  "the finish line!"
     C('lyles', 1),                                                   # 121 he roars
     C('olympians_2024', 1),                                          # 122 Simone Biles
-    C('now_nurse', 1, alt=[('us_womens_hockey_2', 0.0)]),            # 123 nurses  "This generation of Americans"
-    C('now_lineman', 1, alt=[('fishermen_2', 0.0)]),                 # 124 linemen bring the power back
-    C('now_teacher', 1, alt=[('hockey_2026', 1.2)]),                 # 125 a teacher
-    C('now_troops', 1, alt=[('salute', 0.0)]),                       # 126 service members today
+    C('now_nurse', 1),                                               # 123 nurses walk out through the applause
+    C('now_lineman', 1),                                             # 124 linemen bring the power back
+    C('now_teacher', 1),                                             # 125 a teacher reads to her class
+    C('now_troops', 1),                                              # 126 a sailor home from the sea
     C('hockey_2026_2', 1, alt=[('hockey_2026', 2.0)]),               # 127 the golden goal
-    C('alysa_liu', 1),                                               # 128 Alysa Liu  "has a rendezvous with destiny."
+    C('alysa_liu', 1),                                               # 128 Alysa Liu
     C('moh', 1, alt=[('salute', 0.5)]),                              # 129 the Medal of Honor
     C('barron', 1),                                                  # 130 Bishop Barron
     C('prevost_young', 1, alt=[('prevost_young_2', 0.0)]),           # 131 young Fr. Prevost (black and white) ...
     C('pope_leo', 1.5, alt=[('pope_leo_2', 0.0)]),                   # 132 ... Pope Leo XIV
-    C('now_faith', 1, alt=[('olympians_2024_3', 0.0)]),              # 133.5 the Eucharistic Congress
-    C('now_science', 0.75, alt=[('artemis_3', 2.5)]),                # 134.5 the lab
+    C('now_science', 1),                                             # 133.5 the Webb team applauds
+    C('now_farmer', 0.75),                                           # 134.5 the harvest
     C('cadets', 0.75),                                               # 135.25 the hat toss
-    # 136-144: the last sung line
-    C('now_firefighters', 1.5, alt=[('firefighters_2', 0.0)]),       # 136 firefighters on the line
-    C('coast_guard', 1.5),                                           # 137.5 the rescue swimmer  "Attaboy,"
-    C('olympians_2024_4', 1.5),                                      # 139 Caroline Marks in the barrel  "Clarence."
-    C('bailey_family', 1.5, alt=[('dad_kid', 2.0)]),                 # 140.5 George home, his family in his arms (black and white)
-    C('artemis_earth', 3, alt=[('earthrise', 0.0)], fx=dict(bloom=0.3)),  # 142 the Earth sets behind the Moon; the song stops dead at 144
+    # 136-160: the instrumental, the music opening up: this generation, anonymous, under FDR
+    C('anon_welder', 2, **{'in': 0.3}),                              # 136 a young welder, the arc lit
+    C('anon_wedding', 2, **{'in': 0.4}),                             # 138 a wedding kiss under the arbor  "This generation
+    C('anon_baby', 1.5),                                             # 140 a father lifts his newborn         of Americans"
+    C('anon_citizens', 2),                                           # 141.5 new citizens take the oath
+    C('now_firefighters', 1.5, **{'in': 1.2}),                       # 143.5 firefighters on the line
+    C('anon_grads', 1.5, **{'in': 0.3}),                             # 145 graduates under the confetti  "has a rendezvous
+    C('anon_welder_2', 1.5, **{'in': 1.0}),                          # 146.5 sparks
+    C('anon_wedding_2', 1.5),                                        # 148 the toast                          with destiny."
+    C('now_police', 1.5),                                            # 149.5 shopping with a cop
+    C('anon_volunteers', 1.5, **{'in': 0.8}),                        # 151 neighbors clear the storm
+    C('now_arts', 2),                                                # 152.5 Chris Stapleton sings the anthem
+    C('anon_family', 1.5, **{'in': 1.4}),                            # 154.5 a Little Leaguer slides in
+    C('now_builder', 1.5),                                           # 156 the ironworkers top out
+    C('coast_guard', 1.5),                                           # 157.5 the rescue swimmer
+    C('olympians_2024_4', 1),                                        # 159 Caroline Marks in the barrel
+    # 160-168: the last sung line
+    C('fishermen_2', 1.5),                                           # 160 the catch  "Attaboy,"
+    C('artemis_3', 2, **{'in': 1.4}),                                # 161.5 Orion's chutes open, home  "Clarence."
+    C('bailey_family', 2, alt=[('dad_kid', 2.0)]),                   # 163.5 George home, his family in his arms (black and white)
+    C('artemis_earth', 3.5, alt=[('earthrise', 0.0)], fx=dict(bloom=0.3)),  # 165.5 the Earth sets behind the Moon; the song stops dead at 168
 ]
 # ---- the last ring; the girl reaches for the phone (the last shot holds before she picks it up)
 END_TEXT = os.environ.get('CALL_TEXT', 'Your purpose is calling.')

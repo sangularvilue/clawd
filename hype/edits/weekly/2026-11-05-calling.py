@@ -146,7 +146,7 @@ def strobe(*items):
     out = []
     for it in items:
         it = dict(it, beats=0.5)
-        it['fx'] = dict(it.get('fx', {}), punch=0.08, chroma=8, **COLOR)
+        it['fx'] = dict(it.get('fx', {}), punch=0.08, chroma=8)
         out.append(it)
     return out
 
@@ -320,13 +320,13 @@ LEGENDS = [
     C('wtc_fdny', 2, alt=[('firefighters_2', 0.0)]),                 # 86  WORKER: 9/11, Engine 21 down West Street
     C('wtc_fdny_2', 2, alt=[('firefighters', 0.0)], **{'in': 1.8}),  # 88  a rig heads downtown, the towers ahead
     C('wtc_fdny_3', 2, **{'in': 0.3}),                               # 90  an Engine 28 firefighter climbs the North Tower stairs
-    C('miracle_call', 1, fx=dict(COLOR)),                            # 92  "Do you believe in miracles?"
-    *strobe(C('hockey_2026', 1), C('phelps', 1), C('mach_2', 1),     # 93  "YES!" rapid fire in color
+    C('miracle_call', 1),                                            # 92  "Do you believe in miracles?"
+    *strobe(C('hockey_2026', 1), C('phelps', 1), C('mach_2', 1),     # 93  "YES!" rapid fire
             C('gabby', 1), C('retton', 1), C('us_womens_hockey', 1)),
 ]
 # ---- 96-136: the final chorus, full fidelity, every line pays off in color; the song stops dead at 136
 FINALE = [
-    C('liftoff', 3, fx=dict(COLOR, hue=8, bloom=0.45, punch=0.12), mg=[dict(RINGS, cy=0.8, alpha=0.22, period=1.1)]),  # 96 "Liftoff!"
+    C('liftoff', 3, fx=dict(sat=0.0, flame=1.3, bloom=0.45, punch=0.12), mg=[dict(RINGS, cy=0.8, alpha=0.22, period=1.1)]),  # 96 "Liftoff!" the dividing line: black and white, only the flame in color
     C('mission_control', 1, fx=dict(COLOR)),                         # 99
     C('mach', 2, fx=dict(COLOR, hue=6)),                             # 100 BUILDER: the Pike takes off
     C('hockey_2026_2', 1, alt=[('hockey_2026', 2.0)], fx=dict(COLOR)),  # 102 ATHLETE: the golden goal
@@ -373,6 +373,22 @@ END_TEXT = os.environ.get('CALL_TEXT', 'Your purpose is calling.')
 END = [
     C('phone_2', 11, speed=0.6, text=[(6.4, END_TEXT, 50, 0.84, 'serif')]),
 ]
+# The first half is black and white; from the liftoff on, everything is in color except deliberate old references.
+OLD_REFS = {'mission_control', 'mission_control_2', 'aldrin', 'earthrise', 'olympic_extra_2', 'dad_kid_alt',
+            'construction_2', 'kid_flag_alt', 'sweeper_2', 'lewis_clark', 'bailey_family', 'bailey_harry',
+            'sheen', 'sheen_2', 'sheen_3'}
+
+
+def era(items):
+    for it in items:
+        path = it.get('clip') or it.get('photo')
+        if not path:
+            continue
+        key = os.path.splitext(os.path.basename(path))[0][len(P):]
+        it['fx'] = dict(it.get('fx', {}), sat=0.0 if key in OLD_REFS else COLOR['sat'])
+
+
+era(FINALE[1:] + CODA)
 SEQ = OPEN + LINES + M1 + WORK + LEGENDS + FINALE + CODA + END
 
 if __name__ == '__main__':

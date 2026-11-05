@@ -357,7 +357,8 @@ class Post:
         """f float frame. tb: seconds since last beat; ts: seconds since cut.
         Light-touch looks (all off unless the shot asks): trail (0-0.6, echo of earlier frames),
         hue (degrees of slow hue breathing), drift (px of wandering RGB split), duotone ((dark rgb, light rgb)),
-        bloom (0-1 highlight glow), mirror ('h' folds the left half onto the right)."""
+        bloom (0-1 highlight glow), mirror ('h' folds the left half onto the right),
+        flame (saturation kept only on fire: the rest of the frame follows sat, e.g. sat=0 for black and white)."""
         W, H = self.W, self.H
         if fx.get('mirror') == 'h':
             f = f.copy()
@@ -413,7 +414,24 @@ class Post:
         x = np.clip(f / 255.0, 0, 1)
         x = x * x * (3 - 2 * x) * 0.35 + x * 0.65
         g = x.mean(2, keepdims=True)
+        xc = x
         x = g + (x - g) * fx.get('sat', 1.18)
+        flame = fx.get('flame', 0)
+        if flame:  # black and white except the fire: hot oranges and yellows in the rocket's exhaust column keep color
+            r, gg, b = xc[..., 0], xc[..., 1], xc[..., 2]
+            m = np.clip((r - 0.82) / 0.08, 0, 1) * np.clip((r - b - 0.08) / 0.12, 0, 1)
+            band = fx.get('flame_band', 0.09)
+            if band:  # only near the exhaust column: the x of the white-hot plume (and rocket) in the lower frame
+                lo = xc[int(H * 0.3):].min(2)
+                ys, xs = np.nonzero(lo > 0.9)
+                cx = np.median(xs) if len(xs) > 50 else W / 2
+                y_top = int(H * 0.3) + (np.percentile(ys, 2) if len(ys) > 50 else 0)
+                col = np.exp(-((np.arange(W) - cx) / (band * W)) ** 2)[None, :]
+                rows = np.clip((np.arange(H) - y_top + 0.05 * H) / (0.05 * H), 0, 1)[:, None]
+                m = m * col * rows
+            m = np.asarray(Image.fromarray((m * 255).astype(np.uint8)).resize((W // 4, H // 4), Image.BILINEAR)
+                           .filter(ImageFilter.GaussianBlur(2)).resize((W, H), Image.BILINEAR), np.float32)[..., None] / 255
+            x = x + (g + (xc - g) * flame - x) * m
         duo = fx.get('duotone')
         if duo:
             lo, hi = np.array(duo[0], np.float32) / 255, np.array(duo[1], np.float32) / 255

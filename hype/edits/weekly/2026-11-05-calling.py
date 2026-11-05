@@ -398,8 +398,9 @@ FINALE = [
     C('anon_grads', 1.5, **{'in': 0.3}),                             # 145 graduates under the confetti  "has a rendezvous
     C('anon_welder_2', 1.5, **{'in': 1.0}),                          # 146.5 sparks
     C('anon_wedding_2', 1.5),                                        # 148 the toast                          with destiny."
-    C('now_police', 2.5),                                            # 149.5 shopping with a cop
-    C('anon_volunteers', 2.5, **{'in': 0.5}),                        # 152 neighbors clear the storm
+    C('now_police', 1.5),                                            # 149 shopping with a cop
+    C('anon_volunteers', 1.5, **{'in': 0.5}),                        # 150.5 neighbors clear the storm
+    C('nd_band', 2, alt=[('anon_volunteers', 1.4)]),                 # 152 the Notre Dame Marching Band  (beats 152-154: spliced in when it lands)
     C('anon_family', 1.5, **{'in': 1.4}),                            # 154.5 a Little Leaguer slides in
     C('now_builder', 1.25),                                          # 156 the ironworkers top out
     C('coast_guard', 1.25),                                          # 157.25 the rescue swimmer

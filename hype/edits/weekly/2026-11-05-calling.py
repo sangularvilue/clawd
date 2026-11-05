@@ -381,25 +381,24 @@ FINALE = [
     C('now_teacher_2', 1, alt=[('now_teacher', 0.0)]),               # 125 a young teacher with her class
     C('now_troops', 1),                                              # 126 a sailor home from the sea
     C('hockey_2026_2', 1, alt=[('hockey_2026', 2.0)]),               # 127 the golden goal
-    C('alysa_liu', 1),                                               # 128 Alysa Liu
+    C('alysa_liu', 2),                                               # 128 Alysa Liu
     C('moh', 1, alt=[('salute', 0.5)]),                              # 129 the Medal of Honor
     C('barron', 1),                                                  # 130 Bishop Barron
     C('prevost_young', 1, alt=[('prevost_young_2', 0.0)]),           # 131 young Fr. Prevost (black and white) ...
     C('pope_leo', 1.5, alt=[('pope_leo_2', 0.0)]),                   # 132 ... Pope Leo XIV
-    C('now_science', 1),                                             # 133.5 the Webb team applauds
     C('now_farmer', 0.75),                                           # 134.5 the harvest
     C('cadets', 0.75),                                               # 135.25 the hat toss
     # 136-160: the instrumental, the music opening up: this generation, anonymous, under FDR
     C('anon_welder', 1.5, **{'in': 0.3}),                            # 136 a young welder, the arc lit
     C('anon_wedding', 2, **{'in': 0.4}),                             # 137.5 a wedding kiss under the arbor  "This generation
-    C('anon_baby', 1.5),                                             # 140 a father lifts his newborn         of Americans"
+    C('anon_baby', 2.5),                                             # 139.5 a father lifts his newborn       of Americans"
     C('anon_citizens', 2),                                           # 141.5 new citizens take the oath
     C('now_firefighters', 1.5, **{'in': 1.2}),                       # 143.5 firefighters on the line
     C('anon_grads', 1.5, **{'in': 0.3}),                             # 145 graduates under the confetti  "has a rendezvous
     C('anon_welder_2', 1.5, **{'in': 1.0}),                          # 146.5 sparks
     C('anon_wedding_2', 1.5),                                        # 148 the toast                          with destiny."
-    C('now_police', 1.5),                                            # 149 shopping with a cop
-    C('anon_volunteers', 1.5, **{'in': 0.5}),                        # 150.5 neighbors clear the storm
+    C('now_police', 1),                                              # 150 shopping with a cop
+    C('anon_volunteers', 1, **{'in': 0.5}),                          # 151 neighbors clear the storm
     C('nd_band', 2, alt=[('anon_volunteers', 1.4)]),                 # 152 the Notre Dame Marching Band  (beats 152-154: spliced in when it lands)
     C('anon_family', 1.5, **{'in': 1.4}),                            # 154.5 a Little Leaguer slides in
     C('now_builder', 1.25),                                          # 156 the ironworkers top out
@@ -409,8 +408,8 @@ FINALE = [
     # 160-168: the last sung line
     C('fishermen_2', 1.5),                                           # 160 the catch  "Attaboy,"
     C('artemis_3', 2, **{'in': 1.4}),                                # 161.5 Orion's chutes open, home  "Clarence."
-    C('bailey_family', 2, alt=[('dad_kid', 2.0)]),                   # 163.5 George home, his family in his arms (black and white)
-    C('artemis_earth', 3.5, alt=[('earthrise', 0.0)], fx=dict(bloom=0.3)),  # 165.5 the Earth sets behind the Moon; the song stops dead at 168
+    C('bailey_family', 3, alt=[('dad_kid', 2.0)]),                   # 163.5 George home, his family in his arms (black and white)
+    C('artemis_earth', 2.5, alt=[('earthrise', 0.0)], fx=dict(bloom=0.3)),  # 166.5 the Earth sets behind the Moon; the song stops dead at 168
 ]
 # ---- the last ring; the girl reaches for the phone (the last shot holds before she picks it up)
 END_TEXT = os.environ.get('CALL_TEXT', 'Your purpose is calling.')

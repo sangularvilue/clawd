@@ -109,7 +109,7 @@ GRANDIOSO = [
     C('shipyard', 1),                                                             # 31
     C('mach_atlas', 2),                                                           # 32
     C('sousa', 1, alt=[('marine_band_2', 1.0)]),                                  # 34 the March King
-    C('nascar', 1, alt=[('mach_viper', 0.0)]),                                    # 35
+    C('rushmore_2', 1, alt=[('mach_viper', 0.0)]),                                # 35 Rushmore against the blue
     M('05_ship_in_harbor.webp', 2, zoom=(1.0, 1.06)),                             # 36
     C('wrigley', 1, alt=[('datacenter_2', 0.0)]),                                 # 38
     C('chicago_night', 1, alt=[('datacenter_2', 1.5)]),                           # 39
@@ -136,9 +136,9 @@ GRANDIOSO = [
     *strobe(C('marine_band', 1, **{'in': 1.0}), C('touchdown_jesus', 1, **{'in': 1.0}), C('mach_glide', 1, **{'in': 1.5}),
             C('nd_dome_night', 1, **{'in': 2.0}), C('fireworks', 1, alt=[('marine_band_2', 2.0)], **{'in': 1.0}),
             C('rudy', 1, **{'in': 1.0}), C('mach_atlas', 1, **{'in': 2.0}), C('flag_stadium', 1, alt=[('nd_win', 2.5)], **{'in': 1.0}),
-            C('nascar', 1, alt=[('datacenter', 2.0)], **{'in': 1.0}), C('iwo_jima', 1, alt=[('shipyard', 3.0)], **{'in': 1.5}),
+            C('b2_flyover', 1, alt=[('datacenter', 2.0)], **{'in': 1.5}), C('iwo_jima', 1, alt=[('shipyard', 3.0)], **{'in': 1.5}),
             C('datacenter', 1, **{'in': 2.5}), C('wrigley', 1, alt=[('nd_win_2', 2.0)], **{'in': 1.5}),
-            C('eagle', 1, alt=[('mach_viper', 0.6)], **{'in': 1.5}), C('bodybuilder', 1, alt=[('marine_band', 3.0)], **{'in': 1.0}),
+            C('eagle', 1, alt=[('mach_viper', 0.6)], **{'in': 2.0}), C('bodybuilder', 1, alt=[('marine_band', 3.0)], **{'in': 1.0}),
             C('nd_win', 1, **{'in': 1.0}), C('mach_viper', 1, **{'in': 0.3})),
     # 72: the last eight beats to the stinger
     C('rushmore', 2, alt=[('nd_dome_night', 2.5)], **{'in': 1.0}),               # 72

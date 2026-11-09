@@ -100,7 +100,7 @@ GRANDIOSO = [
     C('marine_band', 1),                                                          # 18 The President's Own
     C('flag_stadium', 2, alt=[('marine_band_2', 0.0)]),                          # 19
     C('nd_tunnel', 1.5),                                                          # 21 Play Like A Champion Today
-    C('mach_stratos', 1.5, **{'in': 1.0}),                                        # 22.5 the Earth's curve
+    C('mach_stratos', 1.5),                                                       # 22.5 Stratos balloons lift off the pad
     C('b2_flyover', 2, alt=[('mach_atlas', 0.0)]),                               # 24
     C('eagle', 1, alt=[('mach_glide', 0.0)]),                                     # 26
     C('rushmore', 1, alt=[('shipyard', 1.0)]),                                    # 27
@@ -114,7 +114,7 @@ GRANDIOSO = [
     C('wrigley', 1, alt=[('datacenter_2', 0.0)]),                                 # 38
     C('chicago_night', 1, alt=[('datacenter_2', 1.5)]),                           # 39
     C('rocky', 2, alt=[('rudy', 0.0)]),                                           # 40
-    C('mach_glide', 1, **{'in': 1.3}),                                            # 42 the strike blooms
+    C('mach_glide', 1, **{'in': 1.75}),                                           # 42 the Glide strike blooms
     C('iwo_jima', 2, alt=[('marine_band', 2.0)]),                                 # 43
     C('bodybuilder', 1, alt=[('nd_win_2', 0.0)]),                                 # 45
     C('strongman', 1, alt=[('mach_viper', 1.5)]),                                 # 46
@@ -138,8 +138,8 @@ GRANDIOSO = [
             C('rudy', 1, **{'in': 1.0}), C('mach_atlas', 1, **{'in': 2.0}), C('flag_stadium', 1, alt=[('nd_win', 2.5)], **{'in': 1.0}),
             C('nascar', 1, alt=[('datacenter', 2.0)], **{'in': 1.0}), C('iwo_jima', 1, alt=[('shipyard', 3.0)], **{'in': 1.5}),
             C('datacenter', 1, **{'in': 2.5}), C('wrigley', 1, alt=[('nd_win_2', 2.0)], **{'in': 1.5}),
-            C('eagle', 1, alt=[('mach_viper', 2.5)], **{'in': 1.5}), C('bodybuilder', 1, alt=[('marine_band', 3.0)], **{'in': 1.0}),
-            C('nd_win', 1, **{'in': 1.0}), C('mach_viper', 1, **{'in': 3.0})),
+            C('eagle', 1, alt=[('mach_viper', 0.6)], **{'in': 1.5}), C('bodybuilder', 1, alt=[('marine_band', 3.0)], **{'in': 1.0}),
+            C('nd_win', 1, **{'in': 1.0}), C('mach_viper', 1, **{'in': 0.3})),
     # 72: the last eight beats to the stinger
     C('rushmore', 2, alt=[('nd_dome_night', 2.5)], **{'in': 1.0}),               # 72
     C('flag_stadium_2', 2, alt=[('flag_stadium', 2.0), ('marine_band_2', 2.5)]),  # 74
@@ -148,7 +148,7 @@ GRANDIOSO = [
 ]
 # ---- the stinger (edit beat 80): the card while the hall rings out; then the Gipper's last word
 END = [
-    C('nd_tunnel', 6, dim=0.45, speed=0.5, fx=dict(punch=0.12), text=[(0, 'PLAY LIKE A CHAMPION.', 96, 0.5)]),  # 80
+    C('nd_dome_night', 6, dim=0.5, speed=0.6, fx=dict(punch=0.12), text=[(0, 'PLAY LIKE A CHAMPION.', 118, 0.5)]),  # 80 the card on Sousa's stinger, over the Dome at dusk
     C('gipper', 4.4, **{'in': 11.52}),                                            # 86 "Win just one for the Gipper."
 ]
 SEQ = PRE_ROLL + GRANDIOSO + END

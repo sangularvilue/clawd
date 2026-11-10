@@ -379,7 +379,7 @@ VERSE = layout([
 
 # ---- 60-92: THE DROP. Color; the organ; nobody speaks. The bell is ours: they go when it rings.
 CHORUS = layout([
-    S(DROP, 'bell_town_3', alt=[('flight_deck_3', 0.0)], fx=dict(punch=0.14, bloom=0.3), **{'in': 0.6}),  # the bell, swinging, in color: ours now
+    S(DROP, 'bell_town_2', alt=[('flight_deck_3', 0.0)], fx=dict(punch=0.14, bloom=0.3), **{'in': 0.8}),  # a town's bell swinging on the Fourth of July, 2026, in color: ours now
     S(61.0, 'flight_deck_2', fx=dict(punch=0.1), **{'in': 1.35}),             # and the jet goes
     S(63.0, 'flight_deck', **{'in': 1.6}),                                    # the yellow shirt signals through the steam
     S(64.0, 'young_welder_2'),                                                # she looks at us, snaps the hood down, strikes the arc
@@ -444,8 +444,9 @@ STROBE = pairs(0.5, ('bastogne', 0.6), ('linemen', 0.4),                      # 
 
 # ---- 124-136: the final chord. Every bell rings; Reagan hands it over.
 LAST = layout([
-    S(CHORD, 'bell_town_3', alt=[('grads_today', 0.0)], fx=dict(bloom=0.3, punch=0.14), **{'in': 2.0}),  # every bell rings
-    S(CHORD + 2.0, 'grads_today'),                                            # confetti on the class of today
+    S(CHORD, 'bell_town_2', alt=[('grads_today', 0.0)], fx=dict(bloom=0.3, punch=0.14), **{'in': 2.9}),  # every bell rings
+    S(CHORD + 1.6, 'bell_town_4', alt=[('grads_today', 1.0)], **{'in': 3.9}),  # ... hauled by hand, 4 July 2026
+    S(CHORD + 2.8, 'grads_today'),                                            # confetti on the class of today
     S(CHORD + 4.1, YOURS, lips='Y'),                                          # "And now, they're yours"
     S(W('Y', 7.55), 'oath', **{'in': 0.3}),                                   # "to protect"
     S(W('Y', 8.70), 'kids_team_2'),                                           # "and pass on."  (a coach and his boys)

@@ -1,31 +1,31 @@
-"""HISTORY WILL ASK. A 16:9, ~105 s film cut to Sabaton's "Soldier of Heaven" (our pipe-organ version).
+"""HISTORY WILL ASK. A 16:9, ~94 s film cut to Sabaton's "Soldier of Heaven" (our pipe-organ version).
 
 The premise, in one sentence: history is asking this generation of Americans the same three questions it asked
 every generation before it, and the answer decides "the fate of freedom for a thousand years".
 
-The words are the close of Reagan's commencement address at Notre Dame, 17 May 1981 (National Archives tape):
-  "But history will ask, and our answer determines the fate of freedom for a thousand years: Did a nation born
-   of hope lose hope? Did a people forged by courage find courage wanting? Did a generation steeled by hard war
-   and a harsh peace forsake honor at the moment of great climactic struggle for the human spirit? If history
-   asks such questions, it also answers them. And the answers are to be found in the heritage left by
-   generations of Americans before us. They stand in silent witness to what the world will soon know and
-   history someday record: that in its third century, the American nation came of age, affirmed its leadership
-   of free men and women, serving selflessly a vision of man with God, government for people, and humanity at
-   peace."
-2026 is the 250th year: the start of that third century's second half. 9 November is the day the Wall fell.
+The words are from the close of Reagan's commencement address at Notre Dame, 17 May 1981 (National Archives
+tape). Only the spine of the passage is used (mockup 1 ran the whole thing and it was too much talk):
+  "But history will ask, and our answer determines the fate of freedom for a thousand years:
+   Did a nation born of hope lose hope?
+   Did a people forged by courage find courage wanting?
+   Did a generation steeled by hard war and a harsh peace forsake honor?"
+and, over the last chord: "And now, they're yours to protect and pass on."
+From the drop to the last chord nobody speaks: the music and the pictures answer.
 
 The motif is a BELL: history asking. It tolls after each question; each question is answered, in black and
 white, by the generation it was put to (the Depression's builders, the men on the ramp, the Moon and the Wall).
-On "history someday record:" the song's chorus drops, the picture turns to color, and the bell is ours: today's
-Americans answering. The sentence finishes across the key change ("came of age" -> Artemis II lifts off) and
-over the generation it describes. On the last chord every bell rings and Reagan hands it over ("And now,
-they're yours to protect and pass on."). Then silence, one toll, and two children's white-gloved hands at the
-Liberty Bell; we stop before they touch it. End line: "History is asking."
+At the drop the picture turns to color and the bell is ours: today's Americans going when it rings. The last
+bars set then against now, shot for shot (the ironworkers' heave / the wall going up, the ramp / the fire
+crew, the flag on the Moon / Artemis). On the last chord every bell rings and Reagan hands it over. Then
+silence, one toll, and two children's white-gloved hands at the Liberty Bell; we stop before they touch it.
+End line: "History is asking."
+
+Every clip is new to this film (review.py flags anything an earlier edit used).
 
 Song bed (make_bed(); 96 BPM; beats of the edit, the music enters at beat 12 after a cold open):
-  12-28 the synth intro and drum fill, 28-78 verse 1 with no singer (the band only), all lo-fi under the voice;
-  78 chorus 3 at full fidelity with the organ on the vocal line; 110 the key change, full organ;
-  142 the final chord; 150 the organ lets go; ring-out to ~155; 154-168 silence and the last toll.
+  12-28 the synth intro and drum fill, 28-44 half of verse 1, 44-60 the pre-chorus, no singer, all lo-fi;
+  60 chorus 3 at full fidelity with the organ on the vocal line; 92 the key change, full organ;
+  124 the final chord; 132 the organ lets go; 136-150 silence and the last toll.
 Run `python3 edits/weekly/2026-11-09-history.py bed bell` once to build the bed, the tuned bells and the last shot.
 """
 import os
@@ -40,10 +40,12 @@ SONG = 'media/w1109_bed_soh_%s.wav' % SONG_VERSION
 SONG_START = 0.0
 MUSIC_IN = M = 12            # cold open: the bell and Reagan's thesis in silence
 DRUMS = M + 16               # 28  the drums come in (verse 1)
-DROP = M + 66                # 78  chorus 3: color, full fidelity, the organ
-LIFT = M + 98                # 110 the key change, organ tutti
-CHORD = M + 130              # 142 the final chord
-RELEASE = M + 138            # 150 the organ lets go
+PRE = M + 32                 # 44  the pre-chorus starts to climb
+DIP = M + 44                 # 56  the bar before the chorus
+DROP = M + 48                # 60  chorus 3: color, full fidelity, the organ
+LIFT = DROP + 32             # 92  the key change, organ tutti
+CHORD = DROP + 64            # 124 the final chord
+RELEASE = DROP + 72          # 132 the organ lets go
 LOFI = dict(until=DROP, cutoff=2300, hp=170)
 LIMIT = 0.94                 # master limiter on the finished mix
 FX = dict(sat=0.0, chroma=3, shake=4, punch=0.04)  # black and white unless a shot says otherwise
@@ -51,16 +53,17 @@ COLOR = dict(sat=1.05)
 
 # ---------------------------------------------------------------- the song bed
 # Recording beats of Soldier of Heaven (grid phase 0.085 s; bar N starts at 1 + 4(N-1) + the 5/4 bars before it):
-# bars 1-16 (rec beats 1-67: intro, drum fill, verse 1) from the instrumental stems, then straight to chorus 3
-# (bar 63, rec beat 255), the key-change chorus (287) and the final chord (319) of the organ mix Will approved
-# ("Soldier of Heaven (organ) - backing track for Nov 9 video", the one with the shorter ending).
+# bars 1-8 (rec beats 1-33: intro, drum fill, half of verse 1) and bars 13-16 (51-67, the pre-chorus) from the
+# instrumental stems, then straight to chorus 3 (bar 63, rec beat 255), the key-change chorus (287) and the final
+# chord (319) of the organ mix Will approved ("Soldier of Heaven (organ) - backing track for Nov 9 video", the
+# one with the shorter ending).
 BED_PHASE = 0.085
 MASTER = 10 ** (-2.5 / 20)   # the organ mix was mastered 2.5 dB down; the bare stems are matched to it
 BEDS = {
-    'organ': dict(segments=[('out/soh_score_organ_v3.backing.wav', 1, 67, MASTER), ('out/soh_organ_short.wav', 255, None, 1.0)],
-                  end=207.84, fade=1.7),
-    'vocals': dict(segments=[('out/soh_score_organ_v3.backing.wav', 1, 67, 1.0), ('media/raw/organ_soh/soh.mp3', 255, None, 1.0)],
-                   end=207.84, fade=1.7),
+    'organ': dict(segments=[('out/soh_score_organ_v3.backing.wav', 1, 33, MASTER), ('out/soh_score_organ_v3.backing.wav', 51, 67, MASTER),
+                            ('out/soh_organ_short.wav', 255, None, 1.0)], end=207.84, fade=1.7),
+    'vocals': dict(segments=[('out/soh_score_organ_v3.backing.wav', 1, 33, 1.0), ('out/soh_score_organ_v3.backing.wav', 51, 67, 1.0),
+                             ('media/raw/organ_soh/soh.mp3', 255, None, 1.0)], end=207.84, fade=1.7),
 }
 
 
@@ -250,14 +253,9 @@ PH = dict(
     B=(8.44, 11.96),     # and our answer determines the fate of freedom for a thousand years.
     Q1=(13.28, 15.94),   # Did a nation born of hope lose hope?
     Q2=(16.70, 20.10),   # Did a people forged by courage find courage wanting?
-    Q3=(21.06, 29.34),   # Did a generation steeled by hard war and a harsh peace forsake honor at the moment of
-                         # great climactic struggle for the human spirit?
-    C1=(30.12, 34.12),   # If history asks such questions, it also answers them.
-    C2=(34.90, 40.16),   # And the answers are to be found in the heritage left by generations of Americans before us.
-    D1=(40.86, 46.14),   # They stand in silent witness to what the world will soon know and history someday record:
-    D2=(46.96, 51.34),   # that in its third century, the American nation came of age,
-    D3=(52.32, 62.04),   # affirmed its leadership of free men and women, serving selflessly a vision of man with
-                         # God, government for people, and humanity at peace.
+    Q3=(21.06, 25.66),   # Did a generation steeled by hard war and a harsh peace forsake honor
+                         # (he goes on "...at the moment of great climactic struggle for the human spirit?" after a
+                         #  0.75 s pause; the cut is in that pause)
 )
 PH['Y'] = (6.28, 9.60)              # And now, they're yours / to protect / and pass on.   (in r81_yours)
 FILE = {'Y': YOURS}                 # phrases that live in another file
@@ -302,23 +300,17 @@ say('Q1', 13.0)                              # "Did a nation born of hope lose h
 toll(17.45, gain=0.85, dur=5.0)
 say('Q2', 22.6)                              # "Did a people forged by courage find courage wanting?"   (to 28.0; the drum fill under "find courage wanting")
 toll(DRUMS + 0.05, gain=0.85, dur=5.0)       # ... and the drums answer
-say('Q3', 34.6)                              # "Did a generation steeled by hard war and a harsh peace forsake honor at the
-                                             #  moment of great climactic struggle for the human spirit?"  (to 47.9)
-toll(48.0, gain=0.85, dur=5.0)
-say('C1', 53.0)                              # "If history asks such questions, it also answers them."  (to 59.4)
-say('C2', 60.2)                              # "And the answers are to be found in the heritage left by generations of Americans before us."  (to 68.6)
-say('D1', 69.0)                              # "They stand in silent witness to what the world will soon know and history someday record:"  (to 77.45)
+say('Q3', 34.6, tail=0.2)                    # "Did a generation steeled by hard war and a harsh peace forsake honor?"  (to 42.0)
+toll(42.2, gain=0.85, dur=5.0)
+toll(DIP, gain=0.9, dur=2.6, fade=2.2)       # the bar before the drop: the bell alone
 toll(DROP, gain=0.6, duck=1.0, dur=5.0)      # the drop: the bell is ours now
-say('D2', LIFT - 0.15 - (PH['D2'][1] - PH['D2'][0]) / BEAT, gain=1.15, duck=0.5)  # "that in its third century, the American nation came of age," ("age" ends on the key change)
 toll(LIFT, note='c', gain=0.55, duck=1.0, dur=5.0)
-say('D3', LIFT + 8.0, gain=1.15, duck=0.5)   # "affirmed its leadership of free men and women, serving selflessly a vision of man with God,
-                                             #  government for people, and humanity at peace."          (118 to 133.6)
 toll(CHORD, note='c', gain=0.6, duck=1.0, dur=3.2, fade=2.6)
 if have('bells_c', '.wav'):                  # ... and every bell rings with it, then makes room for the voice
     VOICEOVER.append(dict(file=media('bells_c', '.wav'), at=CHORD + 0.1, src_in=0.0, dur=6.5, gain=0.42, duck=1.0, fade=0.1))
 if have(YOURS):                              # the handoff, over the held chord: "pass on" lands as the organ lets go
-    say('Y', CHORD + 3.4, gain=1.35, duck=0.38, tail=0.35)  # "And now, they're yours ... to protect ... and pass on."  (145.4 to 150.7)
-END_AT = RELEASE + 4.0                       # 154: the organ has let go; the last shots
+    say('Y', CHORD + 4.4, gain=1.35, duck=0.38, tail=0.35)  # "And now, they're yours ... to protect ... and pass on."
+END_AT = RELEASE + 4.0                       # 136: the organ has let go; the last shots
 END_LEN = 14.0                               # beats: the toll rings out inside them
 toll(END_AT + 0.5, note='c', gain=1.0, duck=1.0, dur=(END_LEN - 0.9) * BEAT, fade=5.0)   # one toll, in silence
 
@@ -349,113 +341,115 @@ W = lambda ph, t: at(ph, t)  # the beat a word lands on
 
 # ---- 0-12: cold open. The bell; the thesis, in silence.
 OPEN = layout([
-    S(0.0, 'liberty_bell', alt=[('w1104_bells', 0.0)], speed=0.7),            # toll: the Liberty Bell, the crack
+    S(0.0, 'liberty_bell', speed=0.7),                                        # toll: the Liberty Bell, the crack
     S(2.3, R81, lips='A'),                                                    # "But history will ask,"
-    S(4.5, 'liberty_bell_2', alt=[('w1104_bells', 1.6)], speed=0.5),          # toll: the bell on its pedestal, 1925
-    S(6.25, R81, lips='B'),                                                   # "and our answer determines"
-    S(W('B', 9.74), 'w1102_statue_liberty', alt=['valley'], speed=0.8),       # "the fate of freedom for a thousand years."
+    S(4.5, 'liberty_bell_2', speed=0.5),                                      # toll: the bell on its pedestal, 1925
+    S(6.25, R81, lips='B'),                                                   # "and our answer determines the fate of freedom"
+    S(W('B', 10.94), 'valley', fit='cover', zoom=(1.0, 1.08), center=(0.42, 0.42)),  # "for a thousand years."  (Washington crossing the Delaware)
 ], M)
 
-# ---- 12-78: the three questions, each answered by the generation it was put to. Lo-fi; drums at 28.
+# ---- 12-60: the three questions, each answered by the generation it was put to. Lo-fi; drums at 28.
 VERSE = layout([
-    S(12.0, 'hope_born', alt=['valley']),                                     # "Did a nation"  (immigrants crowd the rail, waving, as the ship comes in)
-    S(W('Q1', 13.86), 'hope_born_2', alt=[('call_explorers', 0.0)]),          # "born of hope"  (a mother in a shawl beams at her baby)
+    S(12.0, 'hope_born'),                                                     # "Did a nation"  (immigrants crowd the rail, waving, as the ship comes in)
+    S(W('Q1', 13.86), 'hope_born_2'),                                         # "born of hope"  (a mother in a shawl beams at her baby)
     S(W('Q1', 15.00), 'breadline'),                                           # "lose hope?"    (the bread line, 1930)
     S(17.4, 'dust_bowl', **{'in': 2.0}),                                      # toll: the farmer leans into the dust
-    S(19.3, 'hope_answer', alt=[('call_ironworkers', 0.0)]),                  # the answer: they built (the Empire State's steel, 1930)
-    S(20.9, 'call_dam', alt=[('hope_answer_2', 0.0)]),                        # ... and the dam
-    S(22.5, 'forged', alt=[('w1102_steel_pour', 0.0), ('call_steel', 0.0)]),  # "Did a people forged by courage"
+    S(19.2, 'hope_answer'),                                                   # the answer: they built (the Empire State's steel, 1930)
+    S(20.9, 'hope_answer_2'),
+    S(22.5, 'forged'),                                                        # "Did a people forged by courage"  (the ladle, the sparks)
     S(W('Q2', 18.48), 'pearl_harbor'),                                        # "find courage wanting?"  (Battleship Row)
     S(DRUMS, 'go_ramp', fx=dict(punch=0.1)),                                  # toll + drums: the ramp drops and they go
-    S(30.0, 'courage_answer', alt=[('w1102_paratroopers', 0.0)]),             # out the door
-    S(31.5, 'bastogne'),                                                      # the Ardennes
-    S(33.0, 'courage_answer_2', alt=[('go_ramp_2', 0.6)]),                    # down the gangway
+    S(30.0, 'bastogne'),                                                      # the Ardennes: digging the ammunition out of the snow
+    S(31.5, 'go_ramp_2', **{'in': 0.6}),                                      # down the gangway
+    S(33.0, 'bastogne', **{'in': 2.3}),                                       # bent into the blizzard
     S(34.5, R81, lips='Q3'),                                                  # "Did a generation steeled by"
-    S(W('Q3', 22.60), 'w1102_dday_ramp', alt=[('bastogne_2', 0.0)]),          # "hard war"
-    S(W('Q3', 23.26), 'harsh_peace', alt=[('call_vietnam_korea', 0.0)]),      # "and a harsh peace"
-    S(W('Q3', 24.20), 'w1102_arlington_guard', alt=[('call_old_guard', 0.0)]),  # "forsake honor"  (the Tomb sentinel)
-    S(W('Q3', 25.60), 'apollo13'),                                            # "at the moment of great climactic"  (Mission Control, April 1970)
-    S(W('Q3', 27.94), 'call_reagan_wall', alt=[('apollo13_2', 1.9)]),         # "struggle for the human spirit?"  (the Wall, still standing)
-    S(48.0, 'apollo11', alt=[('call_aldrin', 0.0)], **{'in': 0.6}),           # toll: the answer, the flag on the Moon
-    S(49.6, 'spirit_answer', alt=[('w1102_miracle_ice', 0.0)]),               # ... and on top of the Wall, 9 November 1989
-    S(51.2, 'spirit_answer_2', alt=[('spirit_answer', 2.0)], **{'in': 0.15}),  # a hammer and a chisel
-    S(52.5, R81, lips='C1'),                                                  # "If history asks such questions,"
-    S(W('C1', 32.80), 'iwo_jima', alt=[('w1102_iwo_flag', 0.0)], **{'in': 0.3}),  # "it also answers them."
-    S(59.8, 'w1104_lincoln', alt=[('call_lincoln', 0.0)]),                    # "And the answers are to be found"
-    S(W('C2', 36.26), 'rushmore', fit='cover', zoom=(1.0, 1.1)),              # "in the heritage"
-    S(W('C2', 36.98), 'valley', fit='cover', zoom=(1.0, 1.1), center=(0.42, 0.42)),  # "left by"  (Washington crossing the Delaware)
-    S(W('C2', 38.10), 'w1102_rosie'),                                         # "generations"
-    S(W('C2', 38.68), 'w1102_willow_run', alt=[('call_ford', 0.0)]),          # "of Americans"
-    S(W('C2', 39.28), 'call_doughboys', alt=[('call_marines', 0.0)]),         # "before us."
-    S(68.8, 'w1102_normandy_cemetery'),                                       # "They stand in silent witness"
-    S(W('D1', 42.34), 'call_earthrise', alt=[('call_artemis_earth', 0.0)]),   # "to what the world will soon know"
-    S(W('D1', 43.90) + 0.1, 'liberty_bell', alt=[('w1104_bells', 0.0)], speed=0.55, fx=dict(punch=0.0), **{'in': 0.3}),  # "and history someday record:"
+    S(W('Q3', 22.60), 'bastogne_2'),                                          # "hard war"
+    S(W('Q3', 23.26), 'go_miners'),                                           # "and a harsh peace"  (the shift rolls into the mine)
+    S(W('Q3', 24.20), 'apollo13'),                                            # "forsake honor?"  (Mission Control, April 1970) ... toll
+    S(43.0, 'apollo11', **{'in': 0.3}),                                       # the answer: the flag goes up on the Moon
+    S(46.5, 'spirit_answer'),                                                 # on top of the Wall, 9 November 1989
+    S(49.0, 'spirit_answer_2', **{'in': 0.15}),                               # a hammer and a chisel
+    S(50.5, 'hope_answer_2', **{'in': 1.5}),                                  # the answers, once more, faster as the music climbs
+    S(51.5, 'forged_2', **{'in': 1.4}),
+    S(52.5, 'go_ramp', **{'in': 1.6}),
+    S(53.5, 'go_ramp_2', **{'in': 2.2}),
+    S(54.5, 'spirit_answer', **{'in': 2.2}),
+    S(DIP, 'liberty_bell', speed=0.55, fx=dict(punch=0.0), **{'in': 0.3}),    # toll: the bell, alone
 ], DROP)
 
-# ---- 78-110: THE DROP. Color; the organ; today's Americans answer the bell.
+# ---- 60-92: THE DROP. Color; the organ; nobody speaks. The bell is ours: they go when it rings.
 CHORUS = layout([
-    S(DROP, 'flight_deck_2', fx=dict(punch=0.12, bloom=0.3), **{'in': 1.35}),  # the jet goes
-    S(80.0, 'flight_deck', **{'in': 1.6}),                                    # the yellow shirt signals through the steam
-    S(81.0, 'mach_team'),                                                     # the launch crew at the Viper
-    S(82.0, 'mach_viper'),                                                    # and it dives
-    S(83.5, 'young_welder_2', alt=[('young_welder', 0.0), ('call_anon_welder', 0.3)]),  # she looks at us, snaps the hood down, strikes the arc
-    S(86.5, 'shipyard'),                                                      # a carrier's hull module on the hook
-    S(87.5, 'linemen'),                                                       # setting the pole
-    S(88.5, 'fire_crew', alt=[('call_now_firefighters', 1.2)]),               # going in together
-    S(90.0, 'build_crew'),                                                    # the wall goes up
-    S(91.0, 'relay_handoff_2'),                                               # the baton
-    S(93.0, 'huddle_hands', **{'in': 1.3}),                                   # the break
-    S(94.0, 'nd_helmets', alt=[('tunnel_run', 0.5)], crop=(0.0, 0.1, 0.86, 0.86), **{'in': 1.35}),  # Notre Dame, gold helmets under the lights
-    S(95.0, 'mission_control_cheer_2', **{'in': 0.3}),                        # Artemis II is home
-    S(97.0, 'surgical_team', alt=[('young_welder', 0.0)]),                    # the team at the table
-    S(98.0, 'fire_crew_2', alt=[('mach_team_3', 0.0)]),                       # the line holds
-    S(99.0, 'b2_flyover', **{'in': 1.0}),                                     # over the stadium
-    S(100.7, 'flag_stadium'),                                                 # the flag, held by a line of sailors
-    S(W('D2', 46.96) - 0.1, 'fireworks', alt=[('fireworks_2', 0.0)]),         # "that in its third century,"  (the 250th summer)
-    S(W('D2', 49.24), 'w1102_capitol', alt=[('rushmore_2', 0.0)]),            # "the American nation"
-    S(W('D2', 50.44), 'grads_today_2', alt=[('call_anon_grads', 0.2), ('call_cadets', 0.0)]),  # "came of age,"  (the tassels turn)
+    S(DROP, 'bell_town_3', alt=[('flight_deck_3', 0.0)], fx=dict(punch=0.14, bloom=0.3), **{'in': 0.6}),  # the bell, swinging, in color: ours now
+    S(61.0, 'flight_deck_2', fx=dict(punch=0.1), **{'in': 1.35}),             # and the jet goes
+    S(63.0, 'flight_deck', **{'in': 1.6}),                                    # the yellow shirt signals through the steam
+    S(64.0, 'young_welder_2'),                                                # she looks at us, snaps the hood down, strikes the arc
+    S(67.0, 'young_welder', **{'in': 0.5}),
+    S(68.0, 'fire_crew'),                                                     # going in together
+    S(69.5, 'fire_crew_2'),                                                   # the line holds
+    S(70.5, 'build_crew'),                                                    # the wall goes up
+    S(72.0, 'linemen'),                                                       # setting the pole
+    S(73.0, 'surgical_team'),                                                 # the team at the table
+    S(74.0, 'relay_handoff_2'),                                               # the baton
+    S(76.0, 'huddle_hands', **{'in': 1.3}),                                   # the break
+    S(77.0, 'nd_helmets', crop=(0.0, 0.1, 0.86, 0.86), **{'in': 1.35}),       # Notre Dame, gold helmets under the lights
+    S(78.0, 'kids_team', **{'in': 0.8}),                                      # the smallest line fires off the ball
+    S(79.5, 'mission_control_cheer_2', **{'in': 0.3}),                        # Artemis II is home
+    S(81.5, 'mission_control_cheer', **{'in': 1.6}),                          # the room goes up
+    S(82.5, 'new_citizens'),                                                  # right hands raised
+    S(84.0, 'mach_team'),                                                     # the launch crew at the Viper
+    S(85.5, 'mach_team', **{'in': 2.1}),                                      # the operators
+    S(87.0, 'mach_team_2'),                                                   # the airframe lifted under the flag
+    S(89.0, 'mach_team_3'),                                                   # carried out across the desert
+    S(90.5, 'grads_today_2'),                                                 # the tassels turn
 ], LIFT)
 
-# ---- 110-142: THE KEY CHANGE. The sentence finishes over the generation it describes; then everything at once.
+# ---- 92-116: THE KEY CHANGE. Bigger pictures, held longer.
 FINAL = layout([
-    S(LIFT, 'launch', alt=[('w1104_launch', 0.0), ('call_artemis', 1.2)], fx=dict(bloom=0.4, punch=0.14)),  # Artemis II, liftoff on the downbeat
-    S(112.5, 'launch_2', alt=[('call_now_starship', 0.0), ('w1102_artemis', 0.0)], fx=dict(bloom=0.3)),
-    S(114.0, 'flight_deck_3'),                                                # the director, arms wide in the steam
-    S(115.5, 'mach_glide', **{'in': 1.85}),                                   # the Glide comes in
-    S(W('D3', 52.32) - 0.1, 'blue_angels', alt=[('/blue_angels', 0.0)]),      # "affirmed its leadership"
-    S(W('D3', 53.54), 'mach_team_2'),                                         # "of free men and women,"  (a woman and a man lift the airframe under the flag)
-    S(W('D3', 55.40) - 0.2, 'coast_guard_crew', alt=[('call_coast_guard', 0.0), ('call_now_firefighters', 0.0)]),  # "serving selflessly"
-    S(W('D3', 56.54), 'nd_grotto', **{'in': 1.75}),                           # "a vision of man"  (the Grotto, candles)
-    S(W('D3', 57.90) - 0.1, 'nd_basilica', alt=[('w1104_basilica_nd', 0.0), ('touchdown_jesus', 0.0)]),  # "with God,"
-    S(W('D3', 58.78) - 0.1, 'new_citizens', alt=[('call_anon_citizens', 0.0)]),  # "government for people,"
-    S(W('D3', 60.34) - 0.2, 'kids_team', alt=[('call_anon_family', 1.4)]),    # "and humanity"
-    S(W('D3', 60.88) + 0.3, 'call_anon_wedding_2'),                           # "at peace."
-], LIFT + 24.0)
+    S(LIFT, 'blue_angels', fx=dict(bloom=0.25, punch=0.14)),                  # the diamond climbs on its smoke
+    S(94.5, 'nd_students', **{'in': 0.5}),                                    # the stadium on its feet
+    S(96.0, 'relay_handoff', crop=(0.0, 0.0, 0.86, 0.86), **{'in': 2.2}),     # four women and the flag
+    S(98.0, 'flight_deck_3'),                                                 # the director, arms wide in the steam
+    S(99.5, 'nd_basilica'),                                                   # the Basilica of the Sacred Heart
+    S(101.5, 'nd_grotto', **{'in': 1.75}),                                    # the Grotto, every candle lit
+    S(103.0, 'fire_crew_3'),                                                  # at the door of the fire
+    S(104.5, 'flight_deck_2', **{'in': 2.7}),                                 # off the bow, over the sea
+    S(106.0, 'launch_2'),                                                     # Artemis II: ignition
+    S(107.5, 'launch', fx=dict(bloom=0.35)),                                  # and the whole stack goes past the camera
+], LIFT + 18.0)
 
 
-def strobe(*keys):
-    """Half-beat cuts: the generations, then and now, one after the other."""
+def pairs(beats, *rows):
+    """Then and now, shot for shot: (old key, in), (new key, in), ... each `beats` long."""
     out = []
-    for k in keys:
+    for k in rows:
         k = (k,) if isinstance(k, str) else k
-        it = C(k[0], 0.5, **({'in': k[1]} if len(k) > 1 else {}))
-        it['fx'] = dict(it.get('fx', {}), punch=0.08, chroma=8)
+        it = C(k[0], beats, **({'in': k[1]} if len(k) > 1 else {}))
+        it['fx'] = dict(it.get('fx', {}), punch=0.08, chroma=6 if beats >= 1 else 8)
         out.append(it)
     return out
 
 
-STROBE = strobe(('go_ramp', 0.3), ('flight_deck_2', 2.2), ('call_dam', 0.5), ('shipyard', 0.4),
-                ('bastogne', 0.5), ('linemen', 0.4), ('iwo_jima', 1.2), ('flag_stadium', 1.0),
-                ('w1102_rosie', 0.5), ('young_welder', 0.5), ('apollo11', 1.5), ('mission_control_cheer', 1.6),
-                ('breadline_2', 0.5), ('build_crew', 1.0), ('hope_born_2', 0.3), ('nd_students', 0.5))
+# 110-116 a beat each, 116-124 half a beat each: the generations before us against this one
+RHYME = pairs(1.0, ('hope_answer', 0.4), ('build_crew', 0.6),                 # the heave / the wall goes up
+              ('forged', 0.5), ('young_welder', 1.2),                         # sparks / sparks
+              ('go_ramp', 0.2), ('fire_crew', 1.0))                           # down the ramp / through the door
+STROBE = pairs(0.5, ('bastogne', 0.6), ('linemen', 0.4),                      # digging in / digging in
+               ('apollo13', 0.8), ('mission_control_cheer', 2.2),             # the room holds its breath / the room goes up
+               ('apollo11', 1.6), ('launch_2', 3.1),                          # the flag on the Moon / the way back
+               ('hope_born_2', 0.3), ('new_citizens', 1.0),                   # the mother at the rail / the oath
+               ('hope_born', 1.6), ('grads_today_2', 0.6),                    # waving at the harbor / the class of today
+               ('go_ramp_2', 1.4), ('flight_deck', 0.6),                      # down the gangway / the deck
+               ('spirit_answer', 1.0), ('nd_students', 2.0),                  # on the Wall / in the stands
+               ('liberty_bell_2', 1.0), ('liberty_bell', 1.0))                # ... and the bell
 
-# ---- 142-154: the final chord. Every bell rings; Reagan hands it over.
+# ---- 124-136: the final chord. Every bell rings; Reagan hands it over.
 LAST = layout([
-    S(CHORD, 'grads_today', alt=[('nd_students', 1.2)], fx=dict(bloom=0.3, punch=0.14)),  # every bell rings: confetti on the class of today
-    S(CHORD + 3.1, YOURS, lips='Y'),                                          # "And now, they're yours"
+    S(CHORD, 'bell_town_3', alt=[('grads_today', 0.0)], fx=dict(bloom=0.3, punch=0.14), **{'in': 2.0}),  # every bell rings
+    S(CHORD + 2.0, 'grads_today'),                                            # confetti on the class of today
+    S(CHORD + 4.1, YOURS, lips='Y'),                                          # "And now, they're yours"
     S(W('Y', 7.55), 'oath', **{'in': 0.3}),                                   # "to protect"
-    S(W('Y', 8.70), 'kids_team_2', alt=[('call_kid_flag', 0.0)]),             # "and pass on."  (a coach and his boys)
-    S(W('Y', 9.60) + 0.7, 'w1102_statue_liberty', **{'in': 1.0}),             # the torch again, in color now
+    S(W('Y', 8.70), 'kids_team_2'),                                           # "and pass on."  (a coach and his boys)
+    S(W('Y', 9.60) + 0.5, 'nd_basilica_2'),                                   # the altar, as the organ rings out
 ], END_AT)
 
 # ---- silence; one toll; a child's hand reaches for the bell. We stop before it lands.
@@ -467,9 +461,8 @@ END = [
 ]
 
 # Black and white until the drop; from it on, color, except the generations before us.
-OLD_REFS = {'go_ramp', 'call_dam', 'bastogne', 'iwo_jima', 'w1102_rosie', 'call_aldrin', 'apollo11', 'breadline_2', 'valley',
-            'hope_born_2',
-            'liberty_bell', R81, YOURS}
+OLD_REFS = {'hope_answer', 'hope_answer_2', 'forged', 'forged_2', 'go_ramp', 'go_ramp_2', 'bastogne', 'apollo13', 'apollo11',
+            'hope_born', 'hope_born_2', 'spirit_answer', 'liberty_bell', 'liberty_bell_2', R81, YOURS}
 
 
 def era(items):
@@ -482,8 +475,8 @@ def era(items):
         it['fx'] = dict(it.get('fx', {}), sat=0.0 if key in OLD_REFS else COLOR['sat'])
 
 
-era(CHORUS + FINAL + STROBE + LAST + END)
-SEQ = OPEN + VERSE + CHORUS + FINAL + STROBE + LAST + END
+era(CHORUS + FINAL + RHYME + STROBE + LAST + END)
+SEQ = OPEN + VERSE + CHORUS + FINAL + RHYME + STROBE + LAST + END
 
 if __name__ == '__main__':
     import sys
@@ -494,7 +487,7 @@ if __name__ == '__main__':
         make_reach()
         print('bells and the ending shot written')
     b = 0.0
-    marks = {id(OPEN[0]): 'OPEN', id(VERSE[0]): 'VERSE', id(CHORUS[0]): 'DROP', id(FINAL[0]): 'LIFT',
+    marks = {id(OPEN[0]): 'OPEN', id(VERSE[0]): 'VERSE', id(CHORUS[0]): 'DROP', id(FINAL[0]): 'LIFT', id(RHYME[0]): 'RHYME',
              id(STROBE[0]): 'STROBE', id(LAST[0]): 'CHORD', id(END[0]): 'END'}
     for s in SEQ:
         if id(s) in marks:

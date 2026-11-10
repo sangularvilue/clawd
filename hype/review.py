@@ -7,12 +7,15 @@ Prints, and writes under DIR (default out/review_<edit>/):
   - shot list      beat, seconds, length, source, source resolution; flags for
                      LOWRES   a color shot whose source (after its crop) is under 700 px wide
                      REPEAT   the same source used more than once (strobe recaps excepted, they are listed)
+                     SEEN     a clip that an earlier edit in edits/ already used: Will has watched it before
                      LONG     a shot over 5 s;  SLOT  a placeholder card that still needs footage
   - loudness       integrated LUFS and true peak of the whole mix, and LUFS per section between the marks
   - --speech       transcribes the final mix with whisper and prints the words it could hear, so the lines can
-                   be checked against the script (a word the model can't pull out of the mix, Will can't either)
+                   be checked against the script (a word the model can't pull out of the mix, Will can't either),
+                   and how much of the film is talk (speech seconds / length)
 """
 import argparse
+import glob
 import importlib.util
 import json
 import os
@@ -27,6 +30,24 @@ def load(path):
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
     return m
+
+
+def seen_before(edit_path):
+    """Base names of every clip or photo used by the other edit files under edits/."""
+    seen = {}
+    me = os.path.abspath(edit_path)
+    for f in sorted(glob.glob(os.path.join(HERE, 'edits', '**', '*.py'), recursive=True)):
+        if os.path.abspath(f) == me:
+            continue
+        try:
+            m = load(f)
+        except Exception:
+            continue
+        for s in getattr(m, 'SEQ', []):
+            src = s.get('clip') or s.get('photo')
+            if src:
+                seen.setdefault(os.path.splitext(os.path.basename(src))[0], os.path.basename(f))
+    return seen
 
 
 def probe(path):
@@ -67,6 +88,7 @@ def main():
     os.makedirs(out, exist_ok=True)
     color_from = a.color_from if a.color_from is not None else getattr(E, 'DROP', 0)
 
+    earlier = seen_before(a.edit)
     rows, b, seen = [], 0.0, {}
     for i, s in enumerate(E.SEQ):
         src = s.get('clip') or s.get('photo')
@@ -81,6 +103,8 @@ def main():
                 flags.append('LOWRES')
         if s['beats'] * beat > 5.0:
             flags.append('LONG')
+        if src and key in earlier:
+            flags.append('SEEN(%s)' % earlier[key])
         if src:
             seen.setdefault(key, []).append(b)
         rows.append(dict(i=i, beat=b, len=s['beats'], key=key, res=res, flags=flags))
@@ -151,6 +175,11 @@ def main():
                 line, t0 = [], None
         if line:
             print('  %6.2f s  b%6.1f  %s' % (t0, t0 / beat, ' '.join(line)))
+        talk, last = 0.0, None
+        for w0, w1, _ in words:  # runs of words, pauses under 0.35 s counted as talk
+            talk += (w1 - w0) + (w0 - last if last is not None and w0 - last < 0.35 else 0.0)
+            last = w1
+        print('speech: %.1f s of %.1f s (%.0f%%)' % (talk, b * beat, 100 * talk / (b * beat)))
 
 
 if __name__ == '__main__':

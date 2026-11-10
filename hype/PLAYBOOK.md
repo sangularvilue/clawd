@@ -42,25 +42,32 @@ best lines, the song and its biggest moment. Will picks a theme and a song (or s
    a handoff. If the shots could be shuffled without loss, it is a montage.
 4. **A motif in sound and picture** that interrupts the speech and pays off at the end: the phone that keeps
    ringing, the bell that tolls after each question. New every week; never a copy of the last one.
-5. **Great words, cut into phrases and spread across the film.** One great speech or several voices building one
-   argument. Never one block of speech at the front. No clipped words. When the speaker is on screen, his lips
-   are in sync.
+5. **Great words, used sparingly.** A speech is cut down to its spine (the thesis, the lines everyone would
+   quote, the close) and spread out, so the music and pictures get long stretches to themselves. A good target
+   is a fifth of the running time; half is a speech with pictures. Ending on the voice works. No clipped words.
+   When the speaker is on screen, his lips are in sync.
 6. **Word-to-picture cuts.** The picture changes on the word and shows the thing being said ("born of hope":
    immigrants at the rail; "silent witness": the crosses at Normandy).
-7. **Past in black and white, present in color**, with one dividing line on the song's biggest moment and the
-   biggest picture of the film on that downbeat.
+7. **One visible turn, on the song's biggest moment.** The film looks one way before it and another way after,
+   and the strongest picture lands on that downbeat. How it turns is chosen fresh for the theme: black and
+   white to color, stills to motion, night to day, one face to a crowd, slow to fast.
 8. **Music shaped to the story.** Quiet or lo-fi under the words, full fidelity at the drop, a lift (key change),
    room to breathe, a dead stop or silence where it counts. The music is never one level for 90 seconds.
-9. **People.** Legends first, then living Americans, then anonymous young people doing real work (welders,
-   linemen, firefighters, nurses, graduates, newlyweds). No face twice, apart from deliberate recaps.
+9. **A cast that fits the theme.** Faces over hardware, and people the viewer can see himself in. Who they are
+   follows from what the film is saying; it is not a standing list. No face twice, apart from deliberate recaps.
 10. **Varied shot lengths.** Half-beat strobes and three-second holds in the same film; emotional shots held longer.
 11. **No graphics clutter.** No captions, squiggles or slam cards. One quiet serif line at the very end.
-12. **An unresolved last gesture, handed to the viewer.** The hand reaching for the phone; the child's hand at
-    the bell. We stop before it resolves.
-13. **Faith at the summit.** When the film peaks, something sacred is on screen (the Grotto, the Basilica).
+12. **The ending is handed to the viewer.** The last five seconds turn from the subject to the person watching:
+    a line of the speech, a look, a question, a gesture left unfinished. It should not just stop, and it should
+    not explain itself.
+13. **A summit.** Somewhere near the peak the film reaches past its subject to what the theme holds highest
+    (faith, sacrifice, family, the flag), once, without lingering.
 14. **Quality bars.** Clean full-frame footage; no logos, tickers or lower-thirds; modern color at 720p or
     better (old archival may be soft); speech intelligible over the music; lip-sync within a frame or two.
 15. **Length follows the story**: 60 to 110 seconds. Thirty seconds is a teaser, not a film.
+16. **All-new pictures.** No clip from an earlier video, and not last week's subjects in last week's order. If
+    two films would look alike with the sound off, the second one needs its own visual idea (in "History Will
+    Ask": the bell, and then-against-now pairs).
 
 ## The process
 
@@ -96,9 +103,11 @@ Step by step:
 
 - **Every shot, on the contact sheets**: is it instantly readable? Is the subject large? Any logo, ticker,
   caption, black frame, talking head, or mush? Does it show what the words are saying at that moment?
-- **Flags**: `LOWRES` (color shot under 700 px wide), `REPEAT`, `LONG`, `SLOT` (footage still missing).
+- **Flags**: `LOWRES` (color shot under 700 px wide), `REPEAT`, `LONG`, `SLOT` (footage still missing), and
+  `SEEN` (a clip an earlier edit already used: replace it).
 - **Speech on the final mix**: the transcript of the *rendered* audio must contain every line. A phrase the
-  model cannot pull out of the mix is a phrase Will cannot hear: raise it, duck the music, or move it.
+  model cannot pull out of the mix is a phrase Will cannot hear: raise it, duck the music, or move it. The
+  same pass prints how much of the film is talk; over about a quarter, cut lines.
 - **Loudness by section**: the drop should be several dB above the verse; true peak under 0 dBFS.
 - **Lip-sync**: the picture file and the voice file must be the same cut (0 ms offset), and the clip in-point
   derived from the same word timings as the voice.
@@ -119,6 +128,9 @@ Step by step:
 - End text is one quiet line. No motion-graphics clutter.
 - 720p24 is acceptable for long edits when 1080p60 would be too heavy to send.
 - Lips in sync or do not show the speaker.
+- On "History Will Ask" mockup 1: too much of the speech was left in (it ran the whole passage, about half the
+  film); he likes the speech and likes ending on it. Too many clips repeated from the previous video. The
+  checklist items that copied the phone edit's specifics were rewritten as general principles.
 
 ## Theme bank (each is a summons with a speech behind it)
 
@@ -144,6 +156,8 @@ Step by step:
 ## Pitfalls we have hit
 
 - Starting to source before the theme was agreed: a day of footage for a concept that got dropped.
+- Filling gaps with clips from earlier weeks "as alternates": they stay in, and he notices.
+- Loving the speech too much to cut it.
 - A sourcing agent's "ok" is not a review: open the contact sheet of every clip before it goes in.
 - Loudness-normalizing a bell flattens its decay; ring-outs get static gain only.
 - A voice over a full chorus needs the music ducked to about 40-50% and the voice a little hot; then check it

@@ -1,27 +1,36 @@
 # Hype edit playbook
 
-How we make these consistently good. Written after the 9 Nov weekly ("Play Like a Champion", cut to a Sousa
-march) fell flat next to "Your Purpose Is Calling" (5 Nov), and rebuilt as "History Will Ask".
+How we make these consistently good. Written after the 9 Nov weekly ("Play Like a Champion", the Gipper, cut to
+a Sousa march) and its rework ("History Will Ask") both fell flat next to "Your Purpose Is Calling" (5 Nov), and
+revised after "GO." (10 Nov) worked.
 
-## What went wrong on 9 Nov, in order of damage
+## What went wrong on 9 and 10 Nov
 
-1. **The theme had no stakes.** "Play like a champion" is a slogan. "This generation of Americans has a
-   rendezvous with destiny" is a claim about the viewer and his moment in history. The first is banal no matter
-   how well it is cut.
+Will's verdict on both: **the themes are great; they were executed poorly.** The Gipper and "history will ask"
+are both open to be made again, properly. What the executions got wrong:
+
+1. **A great theme was delivered as a slogan.** The Gipper is a story about a debt handed down (a dying player,
+   a coach who carries the request for eight years, a president who brings it back). The cut showed none of
+   that: it put "Play like a champion" on a card over a montage, and what reached the screen was banal. A theme
+   is only as good as what the film makes the viewer feel of it.
 2. **The song did not hype.** A march is "patriotic music"; it is not a banger. Will had also already named the
    track for that week (the organ cut of "Soldier of Heaven") and the Monday run ignored it.
-3. Everything downstream of those two: a montage on a mood instead of a story, one speech up front, no
-   word-to-picture cuts, no motif, no handoff to the viewer, a slam card instead of a quiet last line, 45 seconds
-   with nothing given room.
+3. **Nothing carried the film.** A montage on a mood instead of a story, one speech up front, no word-to-picture
+   cuts, nothing holding it together, no handoff to the viewer, 45 seconds with nothing given room.
+4. **"History Will Ask" then made the opposite mistakes.** One man reading for half the running time; a tolling
+   bell, which is solemn where the film needed to wind up; and, after the speech was cut down, a wordless second
+   half with nothing driving it. It was also built without being pitched.
 
-The first two cannot be fixed in the edit. So they get decided first, and Will decides them.
+The theme and the song cannot be fixed in the edit, so they are decided first, and Will decides them. But a
+failed film does not mean a failed theme: when one falls flat, ask him which it was before dropping the idea.
 
 ## The two gates (nothing gets sourced before both are passed)
 
 **Gate 1: the theme.** One sentence, addressed to the viewer, that would matter if it were false.
 - It is about *this generation of Americans* and *this moment*: a summons, a test, a debt, a destiny.
 - Test: could it be the thesis of a great speech? Is there a real speech that already says it?
-- Fails the test: slogans ("play like a champion"), moods ("America is awesome"), lists ("things Will likes").
+- Fails the test: slogans, moods ("America is awesome"), lists ("things Will likes"). A great theme can still
+  reach the screen as a slogan if the film only names it; the test applies to what the viewer is shown.
   Notre Dame, Mach, Chicago, the Church and DC are *where the pictures come from*, not the theme.
 
 **Gate 2: the song.** It has to get you hyped with the picture off.
@@ -152,7 +161,12 @@ Step by step:
 
 ## Theme bank (each is a summons with a speech behind it)
 
-- **History will ask** (Reagan, Notre Dame 1981): three questions every generation must answer. *Made 9 Nov.*
+- **History will ask** (Reagan, Notre Dame 1981): three questions every generation must answer. *Tried 9-10 Nov
+  and executed poorly; Will rates the theme great. Open to be redone: fewer words, a device with drive in it, a
+  second half that is going somewhere.*
+- **Win one for the Gipper** (Gipp's request, Rockne in 1928, Reagan at Notre Dame in 1981; "someday is today").
+  *Tried 9 Nov on a Sousa march as "Play Like a Champion" and executed poorly; Will rates the theme great. Open to
+  be redone: tell the story, with a song that hypes.*
 - **The torch has been passed** (JFK inaugural): "to a new generation of Americans, born in this century".
 - **The last best hope of earth** (Lincoln, 1862): "we shall nobly save, or meanly lose".
 - **The man in the arena** (T. Roosevelt, 1910): the credit belongs to the one who is actually in it.
@@ -178,6 +192,7 @@ Step by step:
 - Starting to source before the theme was agreed: a day of footage for a concept that got dropped.
 - Filling gaps with clips from earlier weeks "as alternates": they stay in, and he notices.
 - Loving the speech too much to cut it.
+- Blaming the theme for a failed film. Both November misses were great themes, poorly executed (his words).
 - Building a second concept without pitching it either ("History Will Ask"): two mockups, "at best meh". The
   pitch costs five minutes; skipping it cost a day.
 - Opening on a cold silence, then a sample, then a different section of the song: three starts in ten seconds.

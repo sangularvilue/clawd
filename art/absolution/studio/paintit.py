@@ -28,6 +28,8 @@ BRISTLE, BRISTLE2, FLAT, SOFT, ROUND, LINER, PENCIL = ('tanda/oil-01-paint', 'ta
                                                         'tanda/oil-06-paint', 'deevad/brush', 'deevad/detail_brush_thin',
                                                         'deevad/2B_pencil')
 c = Canvas(W, H)
+if START <= 0:
+    c.record(S + '/timelapse.mp4')
 t0 = time.time()
 
 
@@ -114,6 +116,7 @@ if START <= 0:
     g = np.array([0.56, 0.43, 0.31], np.float32)[None, None] * (0.88 + 0.2 * v[..., None])
     c.load(g)
     del yy, xx, v, g
+    c.frame_every = 30
     # scrub the tone in with a wide brush so the ground itself is brushed, not flat
     for i in range(700):
         x, y = rng.uniform(0, W), rng.uniform(0, H)
@@ -129,6 +132,7 @@ else:
 
 # ------------------------------------------------------------------ stage 1: the drawing
 if START <= 1:
+    c.frame_every = 1
     umber = (0.23, 0.14, 0.09)
     line([(0, YH), (W, YH)], umber, 1.6, PENCIL, p=0.5)
     for k in ('ridge1', 'ridge2'):
@@ -161,8 +165,13 @@ if START <= 2:
     val = f32('value')
     dark = np.array([0.17, 0.105, 0.07], np.float32); lite = np.array([0.94, 0.87, 0.72], np.float32)
     mono = dark[None, None] + (lite - dark)[None, None] * (val[..., None] ** 1.1)
-    n = lay(mono, G['ang60'].astype(np.float32), 58, 46, FLAT, always=True, lmin=4, lmax=9, jit=0.02, op=0.55, p=0.7, tol=0.07)
-    n += lay(mono, G['ang30'].astype(np.float32), 26, 24, FLAT, thr=0.07, lmin=3, lmax=8, jit=0.02, op=0.6, p=0.7, tol=0.07)
+    # first the big blots: only the three or four great masses of light and dark
+    c.frame_every = 5
+    n = lay(mono, G['ang60'].astype(np.float32), 130, 150, FLAT, always=True, lmin=3, lmax=6, jit=0.03, op=0.6, p=0.75, tol=0.2)
+    c.frame_every = 12
+    n += lay(mono, G['ang60'].astype(np.float32), 80, 80, FLAT, thr=0.05, lmin=3, lmax=7, jit=0.025, op=0.6, p=0.7, tol=0.12)
+    c.frame_every = 40
+    n += lay(mono, G['ang60'].astype(np.float32), 44, 44, FLAT, thr=0.07, lmin=3, lmax=8, jit=0.02, op=0.6, p=0.7, tol=0.08)
     log('underpainting strokes', n)
     del mono, val
     snap('2_underpainting')
@@ -172,11 +181,16 @@ maskd = G['maskd'].astype(bool)
 fig = G['mask'] > 128
 
 # ------------------------------------------------------------------ stage 3: colour block-in
-if START <= 3:
+if START <= 3 and STOP >= 3:
     ref = f32('ref60'); ang = G['ang60'].astype(np.float32)
-    n = lay(ref, ang, 54, 40, BRISTLE, always=True, lmin=4, lmax=10, jit=0.035, p=0.85, tol=0.09, curv=0.2)
+    c.frame_every = 6
+    n = lay(ref, ang, 120, 120, BRISTLE, always=True, lmin=3, lmax=7, jit=0.04, p=0.85, tol=0.2, curv=0.2)
+    log('colour blots', n)
+    c.frame_every = 50
+    n = lay(ref, ang, 54, 44, BRISTLE, thr=0.04, lmin=4, lmax=10, jit=0.035, p=0.85, tol=0.09, curv=0.2)
     log('block-in, largest brush', n)
     ref = f32('ref30'); ang = G['ang30'].astype(np.float32)
+    c.frame_every = 130
     n = lay(ref, ang, 28, 24, BRISTLE, thr=0.045, lmin=4, lmax=10, jit=0.035, p=0.85, tol=0.09, curv=0.25,
             brush_in=FLAT, inmask=maskd)
     log('block-in, second brush', n)
@@ -193,11 +207,13 @@ if START <= 3:
 # ------------------------------------------------------------------ stage 4: modelling
 if START <= 4 and STOP >= 4:
     ref = f32('ref15'); ang = G['ang15'].astype(np.float32)
+    c.frame_every = 300
     n = lay(ref, ang, 14, 13, BRISTLE2, thr=0.045, lmin=3, lmax=10, jit=0.03, p=0.85, tol=0.08, detail=detail, dpow=0.8,
             brush_in=FLAT, inmask=maskd)
     log('modelling 14px', n)
     ref = f32('ref8'); ang = G['ang8'].astype(np.float32)
-    n = lay(ref, ang, 7.5, 7, BRISTLE2, thr=0.05, lmin=3, lmax=10, jit=0.028, p=0.85, tol=0.08, detail=detail, dpow=1.3,
+    c.frame_every = 500
+    n = lay(ref, ang, 7.5, 7, BRISTLE2, thr=0.06, lmin=3, lmax=10, jit=0.028, p=0.85, tol=0.08, detail=detail, dpow=1.3,
             brush_in=ROUND, inmask=maskd)
     log('modelling 7px', n)
     snap('4_modelling')
@@ -245,6 +261,7 @@ def small_spruce(x, yb, h, dark, snow=None):
 
 
 if START <= 5 and STOP >= 5:
+    c.frame_every = 45
     R2 = G['ridge2']; ED = G['ridge3']; ref8 = f32('ref8')
     LSP = np.array([(0, 1005), (500, 1062), (900, 1124), (1250, 1196), (1480, 1262), (1600, 1320)], float)
     RSP = np.array([(2640, 1440), (2850, 1384), (3150, 1322), (3500, 1262), (3840, 1215)], float)
@@ -487,6 +504,7 @@ if START <= 5 and STOP >= 5:
 # ------------------------------------------------------------------ stage 6: figures finished
 if START <= 6 and STOP >= 6:
     reg = maskd
+    c.frame_every = 450
     ref = f32('ref4'); ang = G['ang4'].astype(np.float32)
     n = lay(ref, ang, 3.8, 3.6, ROUND, thr=0.045, region=reg, lmin=3, lmax=10, jit=0.02, p=0.85, tol=0.07, curv=0.4)
     log('figures 4px', n)
@@ -497,6 +515,7 @@ if START <= 6 and STOP >= 6:
 
 # ------------------------------------------------------------------ stage 7: accents
 if START <= 7 and STOP >= 7:
+    c.frame_every = 20
     # the sun itself, loaded lead-white with a breath of yellow
     for i in range(46):
         a = rng.uniform(0, 6.28); d = rng.uniform(0, 26)
@@ -546,4 +565,5 @@ if START <= 7 and STOP >= 7:
         r_ = 1.2 + 3.0 * rng.random() ** 3
         c.stroke(ROUND, (0.92, 0.94, 1.0), [(x, y), (x + r_ * 0.8, y + r_ * 1.6)], r=r_, p=rng.uniform(0.4, 0.85), op=0.8, taper=0.05)
     snap('7_final')
+c.finish_recording()
 log('finished:', c.nstrokes, 'brush strokes')

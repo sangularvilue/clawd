@@ -9,6 +9,7 @@ from lib import mypaintlib, tiledsurface, brush as _brush
 
 BR = '/usr/share/mypaint-data/2.0/brushes/'
 N = mypaintlib.TILE_SIZE
+LUT = (np.clip((np.arange(32769) / 32768.0) ** (1 / 2.2) * 255 + 0.5, 0, 255)).astype(np.uint8)
 
 
 class Canvas:
@@ -19,6 +20,8 @@ class Canvas:
         self._b = {}
         self.nstrokes = 0
         self.off = (0.0, 0.0)
+        self.ff = None            # timelapse recorder
+        self.frame_every = 50
 
     def _get(self, name):
         if name not in self._b:
@@ -62,6 +65,33 @@ class Canvas:
         b.stroke_to(s.backend, float(X[-1]), float(Y[-1]), 0.0, 0.0, 0.0, dt, 1.0, 0.0, 0.0)
         s.end_atomic()
         self.nstrokes += 1
+        if self.ff is not None and self.nstrokes % self.frame_every == 0:
+            self.grab()
+
+    def record(self, path, fps=30):
+        """film the canvas while it is painted: frames are piped straight to ffmpeg"""
+        import subprocess
+        self.ff = subprocess.Popen(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24',
+                                    '-s', '%dx%d' % (self.W // 4, self.H // 4), '-r', str(fps), '-i', '-',
+                                    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '21', path], stdin=subprocess.PIPE)
+
+    def grab(self, repeat=1):
+        q = N // 4
+        fr = np.zeros((self.H // 4, self.W // 4, 3), np.uint8)
+        for ty in range((self.H + N - 1) // N):
+            for tx in range(self.W // N):
+                with self.s.tile_request(tx, ty, readonly=True) as t:
+                    blk = LUT[t[::4, ::4, :3].clip(0, 32768)]
+                    h = min(q, fr.shape[0] - ty * q)
+                    fr[ty * q:ty * q + h, tx * q:(tx + 1) * q] = blk[:h]
+        b = fr.tobytes()
+        for _ in range(repeat):
+            self.ff.stdin.write(b)
+
+    def finish_recording(self):
+        if self.ff is not None:
+            self.grab(repeat=120)
+            self.ff.stdin.close(); self.ff.wait(); self.ff = None
 
     def load(self, arr):
         """lay in an RGB float array as the starting surface (the primed, toned canvas)"""
@@ -78,7 +108,7 @@ class Canvas:
                 with self.s.tile_request(tx, ty, readonly=True) as t:
                     h = min(N, self.H - ty * N); w = min(N, self.W - tx * N)
                     out[ty * N:ty * N + h, tx * N:tx * N + w] = t[:h, :w, :3].astype(np.float32) / (1 << 15)
-        return out
+        return np.clip(out, 0, 1) ** (1 / 2.2)      # tiles hold linear light
 
     def load_png(self, path):
         self.s.load_from_png(path, 0, 0)

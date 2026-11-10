@@ -182,7 +182,7 @@ def main():
     #    (voice_tail= lets the line finish past the cut, voice_gain=, duck=)
     #  - VOICEOVER: speeches and monologues that run across any number of shots, e.g.
     #    VOICEOVER = [dict(file='media/w1109_speech.m4a', at=0, src_in=12.3, dur=6.5, gain=1.4, duck=0.25)]
-    #    (at in beats of the edit, src_in/dur in seconds of the source)
+    #    (at in beats of the edit, src_in/dur in seconds of the source; fade= seconds of fade-out, default 0.08)
     items = []
     for i, s in enumerate(seq):
         if s.get('voice') and 'clip' in s and b0 <= starts[i] < b1:
@@ -195,7 +195,7 @@ def main():
         if t0 + v['dur'] > 0 and t0 < dur:
             items.append(dict(file=v['file'], src_in=v.get('src_in', 0.0) + max(0.0, -t0), t0=max(0.0, t0),
                               dur=v['dur'] - max(0.0, -t0), speed=v.get('speed', 1.0), gain=v.get('gain', 1.4),
-                              duck=v.get('duck', 0.25)))
+                              duck=v.get('duck', 0.25), fade=v.get('fade', 0.08)))
     if items:
         mixed = out + '.mix.wav'
         cmd = ['ffmpeg', '-v', 'error', '-y', '-i', wav]
@@ -205,15 +205,23 @@ def main():
             cmd += ['-ss', str(v['src_in']), '-t', str(v['dur'] * spd), '-i', os.path.join(HERE, v['file'])]
             tempo = 'atempo=%f,' % spd if abs(spd - 1) > 1e-3 and 0.5 <= spd <= 2 else ''
             ms = int(v['t0'] * 1000)
+            fo = min(v.get('fade', 0.08), v['dur'])  # fade=: a long fade-out for sounds that ring (a bell), default 80 ms
             parts.append('[%d:a]%saresample=44100,aformat=channel_layouts=stereo,volume=%f,'
-                         'afade=t=in:d=0.02,afade=t=out:st=%f:d=0.08,adelay=%d|%d[v%d]'
-                         % (j + 1, tempo, v['gain'], max(0.0, v['dur'] - 0.08), ms, ms, j))
+                         'afade=t=in:d=0.02,afade=t=out:st=%f:d=%f,adelay=%d|%d[v%d]'
+                         % (j + 1, tempo, v['gain'], max(0.0, v['dur'] - fo), fo, ms, ms, j))
             duck = 'if(between(t,%f,%f),%f,%s)' % (v['t0'] - 0.08, v['t0'] + v['dur'] + 0.12, v['duck'], duck)
         song = "[0:a]volume='%s':eval=frame[s]" % duck
         mix = '[s]' + ''.join('[v%d]' % j for j in range(len(items)))
         fc = ';'.join([song] + parts) + ';' + mix + 'amix=inputs=%d:normalize=0:duration=first[out]' % (len(items) + 1)
         subprocess.run(cmd + ['-filter_complex', fc, '-map', '[out]', '-ar', '44100', '-ac', '2', mixed], check=True)
         os.replace(mixed, wav)
+
+    # LIMIT = 0.94: a look-ahead limiter over the finished mix (voices and bells on top of a loud chorus can clip)
+    if getattr(E, 'LIMIT', None):
+        lim = out + '.lim.wav'
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', wav, '-af',
+                        'alimiter=limit=%f:attack=5:release=80:level=disabled' % E.LIMIT, '-ar', '44100', '-ac', '2', lim], check=True)
+        os.replace(lim, wav)
 
     enc = subprocess.Popen(['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', '%dx%d' % (W, H),
                             '-r', str(fps), '-i', '-', '-i', wav, '-c:v', 'libx264', '-preset', 'medium', '-crf', '18',

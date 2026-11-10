@@ -18,6 +18,7 @@ class Canvas:
         self._bi = {}
         self._b = {}
         self.nstrokes = 0
+        self.off = (0.0, 0.0)
 
     def _get(self, name):
         if name not in self._b:
@@ -37,7 +38,8 @@ class Canvas:
         bi.set_base_value('opaque', op if op is not None else o0)
         for k_, v in sets.items():
             bi.set_base_value(k_, v)
-        P = np.asarray(pts, float)
+        P = np.array(pts, float)
+        P[:, 0] += self.off[0]; P[:, 1] += self.off[1]
         if P.shape[1] == 2:
             n = len(P)
             t = np.linspace(0, 1, n)

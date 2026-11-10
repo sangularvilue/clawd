@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 import scene as sc
 import paint as pt
 import maquette as mq
+import land
 
 sc.SX, sc.SY = mq.SUNPX
 sc.YH = mq.CY
@@ -31,8 +32,7 @@ class Land(sc.Scene):
 
 def build(S):
     L = Land(1.0)
-    L.sky(); L.mountains(); L.ground()
-    img = L.img.astype(np.float32)
+    img, L.ridges = land.build(L.rng)
     M = np.load(S + '/maquette.npz')
     up = lambda a, i=cv2.INTER_CUBIC: cv2.resize(a, (W, H), interpolation=i)
     mask = np.clip(up(M['mask']), 0, 1)
@@ -104,8 +104,9 @@ if __name__ == '__main__':
     out['nlines'] = np.array(len(lines))
     for i, l in enumerate(lines):
         out['line%d' % i] = l
-    out['ridge1'] = L.r1.astype(np.float32)
-    out['ridge2'] = L.r2.astype(np.float32)
+    out['ridge1'] = np.nan_to_num(L.ridges['far'], nan=sc.YH).astype(np.float32)
+    out['ridge2'] = np.fmin(np.nan_to_num(L.ridges['left'], nan=sc.YH), np.nan_to_num(L.ridges['right'], nan=sc.YH)).astype(np.float32)
+    out['ridge3'] = L.ridges['edge'].astype(np.float32)
     np.savez(S + '/guides.npz', **out)
     cv2.imwrite(S + '/study_small.jpg', cv2.resize(img[:, :, ::-1] * 255, (1600, 900), interpolation=cv2.INTER_AREA))
     print('guides saved', len(lines), 'contours')

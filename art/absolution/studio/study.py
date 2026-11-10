@@ -32,7 +32,7 @@ class Land(sc.Scene):
 
 def build(S):
     L = Land(1.0)
-    img, L.ridges = land.build(L.rng)
+    img, L.ridges, L.extra = land.build2(L.rng)
     M = np.load(S + '/maquette.npz')
     up = lambda a, i=cv2.INTER_CUBIC: cv2.resize(a, (W, H), interpolation=i)
     mask = np.clip(up(M['mask']), 0, 1)
@@ -101,6 +101,7 @@ if __name__ == '__main__':
     dsun = np.sqrt((xx - sc.SX) ** 2 + (yy - sc.SY) ** 2)
     det = np.maximum(0.16 + 0.34 * np.exp(-dsun / 500.0), cv2.GaussianBlur(md.astype(np.float32), (0, 0), 8))
     out['detail'] = (np.clip(det, 0, 1) * 255).astype(np.uint8)
+    out.update(L.extra)
     out['nlines'] = np.array(len(lines))
     for i, l in enumerate(lines):
         out['line%d' % i] = l

@@ -20,6 +20,7 @@ class Canvas:
         self._b = {}
         self.nstrokes = 0
         self.off = (0.0, 0.0)
+        self.xf = None
         self.ff = None            # timelapse recorder
         self.frame_every = 50
         self.hold = 1
@@ -49,12 +50,17 @@ class Canvas:
         is lifted, moved, pressed, dragged and lifted again like a hand."""
         (b, r0, o0), bi = self._get(name)
         bi.set_color_rgb(tuple(float(min(max(c, 0), 1)) for c in color))
-        bi.set_base_value('radius_logarithmic', math.log(r) if r else r0)
         bi.set_base_value('opaque', op if op is not None else o0)
         for k_, v in sets.items():
             bi.set_base_value(k_, v)
         P = np.array(pts, float)
         P[:, 0] += self.off[0]; P[:, 1] += self.off[1]
+        if self.xf is not None:      # place a small motif drawn at working size
+            s_, px_, py_, tx_, ty_ = self.xf
+            P[:, 0] = (P[:, 0] - px_) * s_ + tx_; P[:, 1] = (P[:, 1] - py_) * s_ + ty_
+            if r:
+                r = max(r * s_, 0.9)
+        bi.set_base_value('radius_logarithmic', math.log(r) if r else r0)
         if P.shape[1] == 2:
             n = len(P)
             t = np.linspace(0, 1, n)

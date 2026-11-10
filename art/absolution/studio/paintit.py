@@ -211,13 +211,23 @@ if START <= 4 and STOP >= 4:
     ref = f32('ref15'); ang = G['ang15'].astype(np.float32)
     c.frame_every = 300
     n = lay(ref, ang, 14, 13, BRISTLE2, thr=0.045, lmin=3, lmax=10, jit=0.03, p=0.85, tol=0.08, detail=detail, dpow=0.8,
-            brush_in=FLAT, inmask=maskd)
+            brush_in=POINT, inmask=maskd)
     log('modelling 14px', n)
     ref = f32('ref8'); ang = G['ang8'].astype(np.float32)
     c.frame_every = 500
-    n = lay(ref, ang, 7.5, 7, BRISTLE2, thr=0.06, lmin=3, lmax=10, jit=0.028, p=0.85, tol=0.08, detail=detail, dpow=1.3,
-            brush_in=ROUND, inmask=maskd)
+    n = lay(ref, ang, 7.5, 7, POINT, thr=0.05, lmin=3, lmax=10, jit=0.025, p=0.85, tol=0.08, detail=detail, dpow=1.0)
     log('modelling 7px', n)
+    # the distance drawn tightly, as the Hudson River painters finished theirs
+    far = (np.arange(H)[:, None] < G['ridge3'][None, :]) & ~maskd
+    ref = f32('ref4'); ang = G['ang4'].astype(np.float32)
+    c.frame_every = 900
+    n = lay(ref, ang, 4.2, 4.0, POINT, thr=0.04, region=far, lmin=3, lmax=10, jit=0.02, p=0.85, tol=0.07, curv=0.4, taper=0.15)
+    log('distance 4px', n)
+    land_ = far & (np.arange(H)[:, None] > G['ridge2'][None, :] - 6)
+    ref = f32('ref2'); ang = G['ang2'].astype(np.float32)
+    c.frame_every = 1500
+    n = lay(ref, ang, 2.4, 2.4, POINT, thr=0.045, region=land_, lmin=3, lmax=9, jit=0.015, p=0.85, tol=0.07, curv=0.4, taper=0.15)
+    log('distance 2px', n)
     snap('4_modelling')
 
 
@@ -263,122 +273,28 @@ def small_spruce(x, yb, h, dark, snow=None):
 
 
 if START <= 5 and STOP >= 5:
-    c.frame_every = 45
-    R2 = G['ridge2']; ED = G['ridge3']; ref8 = f32('ref8')
-    LSP = np.array([(0, 1005), (500, 1062), (900, 1124), (1250, 1196), (1480, 1262), (1600, 1320)], float)
-    RSP = np.array([(2640, 1440), (2850, 1384), (3150, 1322), (3500, 1262), (3840, 1215)], float)
-    RIVL = np.array([(-40, 1450), (450, 1402), (850, 1345), (1250, 1318), (1620, 1345)], float)
-
-    def planes(x0, x1, summits, lit, shade, rock, strength, base=1090):
-        """cut the mountain into planes: each rib running down from the crest gets a light side and a dark side"""
-        s = 1 if x0 < SX else -1                      # which way the dawn lies
-        for xs in np.arange(x0, x1, 17):
-            xs = int(xs + rng.normal(0, 6))
-            if xs < 0 or xs >= W:
-                continue
-            y0 = float(R2[xs])
-            if y0 > base - 30:
-                continue
-            sx_ = min(summits, key=lambda q: abs(q - xs))
-            dirx = 1 if xs > sx_ else -1
-            if rng.random() < 0.25:
-                dirx = -dirx
-            L = rng.uniform(110, 430) * min(1.0, (base - y0) / 380.0)
-            sl = rng.uniform(0.25, 0.75)
-            pts = [(xs, y0 + 3)]
-            x, y = float(xs), y0 + 3
-            for i in range(6):
-                x += dirx * sl * L / 6 + rng.normal(0, L * 0.02); y += L / 6
-                pts.append((x, y))
-            faces = (dirx == s)
-            rr = rng.uniform(5, 13)
-            near = math.exp(-abs(xs - SX) / 1500.0)
-            for j in range(2 if faces else 1):
-                tcol = np.array(rock if (rng.random() < 0.45) else shade) * rng.uniform(0.8, 1.2)
-                q = [(px - s * rr * (1.2 + j), py + j * 8) for (px, py) in pts]
-                cc = [0.55 * tcol + 0.45 * ref8[min(int(py), H - 1), min(max(int(px), 0), W - 1)] for (px, py) in q[::5]]
-                c.stroke(BRISTLE2, cc[0], q, r=rr * rng.uniform(0.9, 1.5), p=0.8, taper=0.4, op=0.85)
-            if faces or rng.random() < 0.3:
-                a_ = strength * (0.55 + 0.45 * near) * (1.0 if faces else 0.5)
-                lc = np.array(lit) * a_ + ref8[min(int(y0) + 20, H - 1), xs] * (1 - a_)
-                q = [(px + s * rr * 0.9, py) for (px, py) in pts[:5]]
-                c.stroke(FLAT, lc * rng.uniform(0.94, 1.04), q, r=rr * rng.uniform(0.6, 1.1), p=0.85, taper=0.45)
-                if rng.random() < 0.5:      # the crest itself catching fire
-                    c.stroke(ROUND, np.array(lit) * 0.5 * a_ + np.array([1.0, 0.9, 0.78]) * 0.5 * a_ + ref8[min(int(y0) + 20, H - 1), xs] * (1 - a_),
-                             [(xs - 12, float(R2[max(xs - 12, 0)]) + 3), (xs + 12, float(R2[min(xs + 12, W - 1)]) + 3)], r=2.2, p=0.8)
-
-    # the left-hand range: dark, storm-wrapped, only its eastward ribs touched with rose
-    planes(0, 1790, [680], (0.98, 0.70, 0.62), (0.25, 0.28, 0.46), (0.10, 0.11, 0.18), 0.62)
-    planes(0, 1700, [680], (0.98, 0.70, 0.62), (0.22, 0.25, 0.42), (0.09, 0.10, 0.17), 0.45, base=1060)
-    # the three summits on the right in full alpenglow
-    planes(2330, 3840, [2950, 3180, 3420], (1.0, 0.80, 0.66), (0.42, 0.41, 0.62), (0.24, 0.22, 0.36), 1.0)
-    planes(2400, 3840, [2950, 3180, 3420], (1.0, 0.84, 0.70), (0.46, 0.44, 0.64), (0.26, 0.24, 0.38), 0.9, base=1060)
-    log('mountain planes done')
-    # cloud still clinging to the left summit
-    for i in range(170):
-        x = rng.uniform(150, 1250); y = 300 + rng.normal(60, 55) + (x - 700) ** 2 / 9000.0
+    c.frame_every = 60
+    ED = G['ridge3']; ref8 = f32('ref8')
+    FO = G['forest']; DP = G['depth'].astype(np.float32)
+    # cloud still clinging round the great peak on the left
+    for i in range(150):
+        x = rng.uniform(120, 1250); y = 170 + rng.normal(60, 50) + (x - 650) ** 2 / 9000.0
         under = rng.random() < 0.3 and x > 600
         col = (np.array([0.86, 0.60, 0.58]) if under else np.array([0.27, 0.26, 0.38])) * rng.uniform(0.85, 1.15)
         c.stroke(SOFT, col, [(x, y + (16 if under else 0)), (x + rng.uniform(120, 340), y + rng.normal(0, 14) + (16 if under else 0))],
                  r=rng.uniform(16, 40), p=0.55, op=0.4)
-    # a waterfall frozen in its cleft on the dark flank
-    for i in range(0):
-        t = rng.random()
-        x = 1235 + 26 * t + rng.normal(0, 9); y = 700 + 300 * t
-        c.stroke(BRISTLE2, np.array([0.15, 0.16, 0.26]) * rng.uniform(0.8, 1.2), [(x - 14, y), (x - 10 + rng.normal(0, 4), y + rng.uniform(40, 90))], r=rng.uniform(5, 9), p=0.7, op=0.7)
-    for i in range(34):
-        t = rng.random()
-        x = 1232 + 30 * t + rng.normal(0, 5 + 5 * t); y = 690 + 320 * t
-        c.stroke(ROUND, np.array([0.70, 0.78, 0.93]) * rng.uniform(0.85, 1.08), [(x, y), (x + rng.normal(0, 2), y + rng.uniform(18, 60))], r=rng.uniform(1.4, 3.6), p=0.75, taper=0.4)
-    for i in range(24):
-        c.stroke(SOFT, (0.56, 0.58, 0.76), [(1200 + rng.normal(0, 40), 1040 + rng.normal(0, 12)), (1330 + rng.normal(0, 50), 1046 + rng.normal(0, 12))], r=rng.uniform(10, 22), p=0.5, op=0.3)
-    # forests: dark spurs running down into the valley on either hand
-    def inriver(x, y):
-        ry = np.interp(x, RIVL[:, 0], RIVL[:, 1]); wd = np.interp(x, RIVL[:, 0], [160, 138, 112, 92, 70])
-        return x < 1660 and abs(y - ry) < wd * 0.5 + 8
-    for i in range(1500):     # first the woods as dark masses
-        left = rng.random() < 0.6
-        x = rng.uniform(-30, 1680) if left else rng.uniform(2560, 3870)
-        top = np.interp(x, LSP[:, 0], LSP[:, 1], right=1340) if left else np.interp(x, RSP[:, 0], RSP[:, 1])
-        bot = float(ED[int(min(max(x, 0), W - 1))]) - 6
-        if bot <= top + 6:
+    # the forests, tree by tree, far to near: size set by how far off they stand
+    ys, xs = np.where((FO > 90) & (DP > 0.3) & (DP < 9.5))
+    sel = rng.choice(len(ys), min(5600, len(ys)), replace=False)
+    items = sorted([(-float(DP[ys[i], xs[i]]), xs[i] * 2 + rng.uniform(0, 2), ys[i] * 2 + rng.uniform(0, 2)) for i in sel])
+    for (nd, x, y) in items:
+        hpx = min(max(0.030 * 4200 / -nd, 7), 170) * rng.uniform(0.7, 1.25)
+        if y + hpx * 0.3 > float(ED[int(min(x, W - 1))]) + 4 or maskd[int(min(y, H - 1)), int(min(x, W - 1))]:
             continue
-        y = rng.uniform(top + 6, bot)
-        if left and inriver(x, y):
-            continue
-        dep = min(max((y - 1000) / 470.0, 0), 1)
-        col = (np.array([0.06, 0.08, 0.115]) if left else np.array([0.105, 0.115, 0.195])) * rng.uniform(0.75, 1.3) + np.array([0.12, 0.11, 0.17]) * (1 - dep) ** 2
-        c.stroke(BRISTLE, col, [(x, y - rng.uniform(10, 30)), (x + rng.normal(0, 6), y + rng.uniform(8, 26))], r=rng.uniform(10, 22), p=0.85)
-    trees = []
-    for i in range(900):
-        x = rng.uniform(-30, 1680)
-        top = np.interp(x, LSP[:, 0], LSP[:, 1], right=1340)
-        y = rng.uniform(top - 4, max(float(ED[int(min(max(x, 0), W - 1))]) - 4, top))
-        if y > top - 5 and not inriver(x, y):
-            trees.append((y, x, (24 + 95 * ((y - 1000) / 470.0) ** 1.3) * rng.uniform(0.7, 1.3), 0))
-    for i in range(520):
-        x = rng.uniform(2560, 3870)
-        top = np.interp(x, RSP[:, 0], RSP[:, 1])
-        y = rng.uniform(top - 4, max(float(ED[int(min(max(x, 0), W - 1))]) - 4, top))
-        if y > top - 5:
-            trees.append((y, x, (24 + 95 * ((y - 1000) / 470.0) ** 1.3) * rng.uniform(0.7, 1.3), 1))
-    for i in range(0):
-        x = rng.choice([rng.uniform(0, 1750), rng.uniform(2380, 3840)])
-        y = rng.uniform(1030, 1105) if x < 1900 else rng.uniform(1050, 1125)
-        if y > float(R2[int(x)]) + 40:
-            trees.append((y, x, rng.uniform(9, 22), 2))
-    for (y, x, sz, kind) in sorted(trees):
-        dep = min(max((y - 1000) / 470.0, 0), 1)
-        base_ = np.array([0.055, 0.075, 0.105]) if kind == 0 else np.array([0.10, 0.11, 0.19])
-        dark = base_ * rng.uniform(0.8, 1.35) + np.array([0.16, 0.15, 0.22]) * (1 - dep) ** 2
-        sn = (np.array([0.36, 0.41, 0.60]) if kind == 0 else np.array([0.62, 0.56, 0.70])) * rng.uniform(0.85, 1.1)
-        small_spruce(x, y, sz, dark, snow=sn if rng.random() < 0.55 else None)
-    for i in range(140):      # mist threading the woods
-        x = rng.uniform(0, W); y = rng.choice([1135, 1255, 1340]) + rng.normal(0, 14)
-        if 1850 < x < 2500:
-            continue
-        c.stroke(SOFT, np.array([0.56, 0.56, 0.74]) * rng.uniform(0.9, 1.1), [(x, y), (x + rng.uniform(120, 300), y + rng.normal(-6, 6))],
-                 r=rng.uniform(9, 20), p=0.45, op=0.28)
+        base = ref8[min(int(y), H - 1), min(int(x), W - 1)]
+        dark = base * 0.42 * rng.uniform(0.7, 1.2) + np.array([0.015, 0.025, 0.03])
+        sn = base * 0.45 + np.array([0.36, 0.40, 0.56]) * 0.6
+        small_spruce(x, y + hpx * 0.3, hpx, dark, snow=sn if rng.random() < 0.5 else None)
     log('forests done')
     # rock breaking through the snow along the lip of the ledge
     for i in range(70):
@@ -392,11 +308,11 @@ if START <= 5 and STOP >= 5:
         if rng.random() < 0.5:
             sgn = 1 if x < SX else -1
             c.stroke(ROUND, (1.0, 0.84, 0.68), [(x + sgn * wd * 0.1, y - 14), (x + sgn * wd * 0.45, y - 12)], r=1.8, p=0.7)
-    c.off = (0.0, 34.0)
+    c.xf = (0.42, 3048.0, 1090.0, 2770.0, 1150.0)
     # the village and its church, lamps lit, at the end of the plain
     vb = (0.21, 0.21, 0.34)
-    for i in range(70):
-        x = rng.uniform(2700, 3840); y = rng.uniform(1078, 1098)
+    for i in range(24):
+        x = rng.uniform(2800, 3300); y = rng.uniform(1078, 1098)
         s = rng.uniform(7, 20)
         c.stroke(BRISTLE2, np.array([0.17, 0.18, 0.30]) * rng.uniform(0.8, 1.2), [(x, y), (x + rng.normal(0, 3), y - s)], r=s * 0.45, p=0.8)
     for (hx, hw) in [(2952, 44), (3176, 50), (3244, 36), (2892, 32), (3306, 40), (3110, 30)]:
@@ -423,7 +339,7 @@ if START <= 5 and STOP >= 5:
                                                       (3200 + 150 * (t + 0.1) ** 1.5, 1066 - 160 * (t + 0.1))],
                  r=4 + 22 * t, p=0.5, op=0.3)
     log('village done')
-    c.off = (0.0, 0.0)
+    c.xf = None
     # the blasted tree: dead wood on the side he has come from
     tr = [(628, 1745), (636, 1600), (660, 1420), (668, 1250), (700, 1080), (706, 930), (735, 800)]
     for j in range(9):

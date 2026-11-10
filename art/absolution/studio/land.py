@@ -145,3 +145,42 @@ def build(rng):
     img = img * (1 - lm) + g * lm
     ridges = {'far': rf, 'left': rl, 'right': rr, 'edge': ed}
     return img.astype(np.float32), ridges
+
+
+def build2(rng):
+    """the landscape study from the 3D valley (terrain.py), sky and snow ledge"""
+    import terrain as tr
+    import maquette as mq
+    S = sc.Scene(1.0)
+    S.sky()
+    img = S.img.astype(np.float32)
+    dn = S.dn
+    xx, yy = S.xx, S.yy
+    SX, SY, YH = sc.SX, sc.SY, sc.YH
+    x = np.arange(W, dtype=float)
+    ang = np.arctan2(yy - SY, xx - SX)
+    rn = np.interp((ang + np.pi) / (2 * np.pi) * 360, np.arange(361), np.convolve(rng.random(375), np.ones(15) / 15, 'valid') * 1.6 - 0.3)
+    rays = sc.smoothstep(0.50, 0.66, rn) * np.exp(-dn / 0.20) * (yy < SY) * 0.085
+    img += rays[..., None] * np.array([1.0, 0.82, 0.56], np.float32)
+    hh = 800
+    skyh = np.ascontiguousarray(np.clip(cv2.resize(img, (W // 2, H // 2), interpolation=cv2.INTER_AREA), 0, 1))
+    rgb, hit, depth, forest, wat = tr.render(W // 2, hh, 2.0, mq.F, mq.CX, mq.CY, skyh)
+    up = lambda a: cv2.resize(a, (W, hh * 2), interpolation=cv2.INTER_CUBIC)
+    m = np.clip(cv2.GaussianBlur(up(hit), (0, 0), 1.0), 0, 1)[..., None]
+    img[:hh * 2] = img[:hh * 2] * (1 - m) + np.clip(up(rgb), 0, 1) * m
+    ed = np.interp(x, [p[0] for p in EDGE], [p[1] for p in EDGE]) + (sc.fbm(8, W, 1, 14, 5, rng)[4] - 0.5) * 60
+    wp = np.exp(-((xx - SX) / (420 + 2.2 * (yy - YH))) ** 2)
+    L = sc.Scene(1.0)
+    L.img = img.copy(); L.dn = dn
+    L.crest = lambda: np.full(W, 3000.0)
+    L.ground()
+    lm = sc.smoothstep(-2, 2, yy - ed[None, :])[..., None]
+    g = L.img.astype(np.float32)
+    lip = np.exp(-((yy - ed[None, :] - 6) / 6.0) ** 2)[..., None] * (0.25 + 0.5 * wp[..., None])
+    g = g * (1 - 0.30 * np.exp(-np.clip(yy - ed[None, :], 0, None) / 120.0)[..., None]) + lip * np.array([0.5, 0.4, 0.3], np.float32)
+    img = img * (1 - lm) + g * lm
+    hf = up(hit) > 0.5
+    skyline = np.where(hf.any(0), hf.argmax(0), YH).astype(float)
+    ridges = {'far': skyline, 'left': skyline, 'right': skyline, 'edge': ed}
+    extra = {'forest': (np.clip(forest, 0, 1) * 255).astype(np.uint8), 'depth': depth.astype(np.float16), 'water': (wat * 255).astype(np.uint8)}
+    return img.astype(np.float32), ridges, extra

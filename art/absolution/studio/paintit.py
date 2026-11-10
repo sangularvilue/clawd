@@ -106,6 +106,8 @@ def wob(pts, amp):
 
 
 def line(pts, col, r, brush=ROUND, p=0.7, op=None, amp=0.0, taper=0.25):
+    if brush == ROUND and r < 6:
+        brush = POINT       # small exact marks want a firm point
     c.stroke(brush, col, wob(pts, amp) if amp else pts, r=r, p=p, op=op, taper=taper)
 
 
@@ -381,7 +383,7 @@ if START <= 5 and STOP >= 5:
     # rock breaking through the snow along the lip of the ledge
     for i in range(70):
         x = rng.uniform(0, W)
-        if 1300 < x < 2800 and rng.random() < 0.7:
+        if 1250 < x < 2850:
             continue
         y = float(ED[int(x)]) + rng.uniform(-4, 26)
         wd = rng.uniform(26, 90)
@@ -587,12 +589,12 @@ if START <= 7 and STOP >= 7:
         col = (np.array([0.96, 0.84, 0.78]) if lit_ else np.array([0.60, 0.65, 0.88])) * rng.uniform(0.92, 1.05)
         c.stroke(FLAT, col, [(x, y - (5 if lit_ else 0)), (x + rng.uniform(20, 70), y + rng.normal(0, 2) - (5 if lit_ else 0))], r=rng.uniform(4, 10) * (0.5 if lit_ else 1), p=0.8)
     # a tear taking the light on the penitent's cheek
-    tx, ty = P3(0.035, 0.955, 0.06)
-    c.stroke(ROUND, (1.0, 0.93, 0.78), [(tx - 1, ty - 9), (tx, ty)], r=1.2, p=0.7)
-    c.stroke(ROUND, (1.0, 0.97, 0.88), [(tx, ty), (tx + 1, ty + 1)], r=2.4, p=1.0, taper=0.01)
+    tx, ty = P3(-0.036, 0.930, 0.075)
+    c.stroke(POINT, (1.0, 0.90, 0.74), [(tx - 1, ty - 8), (tx, ty)], r=1.0, p=0.6, op=0.7)
+    c.stroke(POINT, (1.0, 0.97, 0.88), [(tx, ty), (tx + 1, ty + 1)], r=1.8, p=1.0, taper=0.01)
     # new snow lying on shoulders, hair, the scarlet cloak where it trails
     for (X0, Y0, X1, Y1, Z, n_, sp) in [(0.44, 1.215, 0.66, 0.99, 0.2, 60, 0.022), (-0.30, 1.03, -0.52, 0.86, 0.22, 44, 0.022),
-                                         (-0.10, 1.115, -0.02, 1.10, 0.05, 10, 0.012), (-1.05, 0.11, -1.72, 0.09, 0.2, 240, 0.07)]:
+                                         (-1.05, 0.11, -1.72, 0.09, 0.2, 240, 0.07)]:
         for i in range(n_):
             t = rng.random()
             x, y = P3(X0 + (X1 - X0) * t + rng.normal(0, sp), Y0 + (Y1 - Y0) * t + rng.normal(0, sp * 0.5), Z + rng.normal(0, 0.12))

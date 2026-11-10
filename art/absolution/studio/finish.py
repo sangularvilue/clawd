@@ -18,7 +18,7 @@ rng = np.random.default_rng(3)
 weave = pt.make_weave(H, W, 1.0, rng)
 L = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
 # brush relief: the fine streaks of the bristles, and lights laid on thicker than darks
-hp = (L - cv2.GaussianBlur(L, (0, 0), 2.5)) * 3.0 + (cv2.GaussianBlur(L, (0, 0), 1.0) - cv2.GaussianBlur(L, (0, 0), 9)) * 1.2
+hp = np.clip((L - cv2.GaussianBlur(L, (0, 0), 2.0)) * 2.2, -0.05, 0.05) * 3.0     # bristle streaks only, not the drawing's edges
 body = 0.25 + 0.75 * cv2.GaussianBlur(L, (0, 0), 3) ** 1.5
 relief = hp * body * 1.6 + weave * (0.42 - 0.22 * body)
 gx = cv2.Sobel(relief, cv2.CV_32F, 1, 0, ksize=3) / 8

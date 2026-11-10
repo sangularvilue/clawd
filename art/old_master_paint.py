@@ -65,6 +65,10 @@ ref += 0.008 * noise(40, 3)[..., None] * (1 - face[..., None])
 ref = np.clip(ref, 0.012, 1)
 soft = ndi.gaussian_filter(ref, (4 * K, 4 * K, 0))                       # sfumato: no edge in a face is a knife edge
 eyes = np.clip(ndi.gaussian_filter(up((mat == 1).astype(f32), Image.BILINEAR), 14 * K) * 6, 0, 1)
+if STILL:                                                              # writing is laid in last, dark and crisp, with a fine brush
+    fine = up((mat == 1).astype(f32), Image.BILINEAR)[..., None]
+    loc = ndi.gaussian_filter(ref, (9 * K, 9 * K, 0))
+    ref = np.clip(ref - 1.1 * fine * np.clip(loc - ref, 0, 1) * (loc.sum(-1, keepdims=True) > 1.2), 0.012, 1)
 sf = ((0.2 if STILL else 0.65) * face * (1 - eyes))[..., None]
 ref = ref * (1 - sf) + soft * sf
 ref += (0.4 if STILL else 1.0) * face[..., None] * noise(34, 3)[..., None] * np.array([0.030, 0.004, -0.020], f32)   # broken colour in the flesh
@@ -204,6 +208,8 @@ c2 = cracks(int(11000), 1.1)
 gate = smoothstep(-0.2, 0.5, noise(240, 3))
 ck = np.clip(c1 * (0.35 + 0.5 * light) + c2 * (0.08 + 0.55 * light) * gate, 0, 1)
 ck *= 0.75 + 0.25 * noise(8, 2)
+if STILL:
+    ck *= 1 - 0.6 * eyes
 lift = np.roll(np.roll(ck, -1, 0), -1, 1)                                      # the lifted lip of each island catches light
 img = img * (1 - 0.45 * ck[..., None]) + 0.05 * (lift * (1 - ck))[..., None] * light[..., None]
 

@@ -61,6 +61,11 @@ warm = noise(260, 4)[..., None] * np.array([0.030, 0.008, -0.022], f32)
 ref = ref * (1 + 0.10 * noise(520, 4)[..., None] * (1 - 0.6 * face[..., None])) + warm * (0.35 + 0.65 * (1 - face[..., None]))
 ref += 0.008 * noise(40, 3)[..., None] * (1 - face[..., None])
 ref = np.clip(ref, 0.012, 1)
+soft = ndi.gaussian_filter(ref, (4 * K, 4 * K, 0))                       # sfumato: no edge in a face is a knife edge
+eyes = np.clip(ndi.gaussian_filter(up((mat == 1).astype(f32), Image.BILINEAR), 14 * K) * 6, 0, 1)
+sf = (0.65 * face * (1 - eyes))[..., None]
+ref = ref * (1 - sf) + soft * sf
+ref += face[..., None] * noise(34, 3)[..., None] * np.array([0.030, 0.004, -0.020], f32)   # broken colour in the flesh
 
 # ----------------------------------------------------------------- painting
 canvas = np.empty((H, W, 3), f32)
@@ -137,9 +142,10 @@ paint_layer(95, 300, -1, 0.90, curve=0.5, colour_jit=0.05, dry=0.7)          # d
 paint_layer(46, 170, 0.05, 0.88, curve=0.4, colour_jit=0.04, dry=0.7)
 paint_layer(22, 90, 0.045, 0.88, curve=0.3, colour_jit=0.03, dry=0.6)
 paint_layer(11, 46, 0.04, 0.90, region=0.25 + 0.75 * figure, curve=0.2, colour_jit=0.025)
-paint_layer(5.5, 26, 0.035, 0.90, region=np.clip(face + linen + 0.08, 0, 1), colour_jit=0.02, dry=0.4)
-paint_layer(3.0, 15, 0.035, 0.92, region=np.clip(face + 0.5 * linen, 0, 1), colour_jit=0.015, dry=0.3)
-paint_layer(1.8, 9, 0.04, 0.95, region=face, colour_jit=0.01, dry=0.2)
+paint_layer(5.5, 30, 0.04, 0.85, region=np.clip(face + linen + 0.08, 0, 1), colour_jit=0.035, dry=0.5)
+paint_layer(3.0, 17, 0.075, 0.88, region=np.clip(face + 0.5 * linen, 0, 1), colour_jit=0.02, dry=0.3)
+paint_layer(1.8, 10, 0.10, 0.92, region=face, colour_jit=0.01, dry=0.2)
+paint_layer(1.4, 7, 0.05, 0.95, region=eyes, colour_jit=0.005, dry=0.1)
 
 # signature, in the shadow at the right, the way they did it
 try:
@@ -170,7 +176,7 @@ img *= (1 + 0.075 * weave * (0.35 + 0.65 * thin))[..., None]                   #
 pool = ndi.gaussian_filter(hs, 3 * K) - hs
 img *= (1 - np.clip(pool, 0, 1) * 0.35)[..., None]
 img = np.clip(img, 0, 1.2)
-img = img * np.array([1.0, 0.925, 0.74], f32) * (1 + 0.05 * noise(700, 3))[..., None]
+img = img * np.array([1.0, 0.94, 0.80], f32) * (1 + 0.05 * noise(700, 3))[..., None]
 img = img + np.array([0.022, 0.016, 0.006], f32) * (1 + 0.5 * noise(400, 3))[..., None]
 
 # craquelure: drying islands, finer and more open where the lead white is thick
@@ -200,8 +206,6 @@ img = img * (1 - 0.45 * ck[..., None]) + 0.05 * (lift * (1 - ck))[..., None] * l
 edge = np.minimum(np.minimum(xx, W - xx), np.minimum(yy, H - yy)) / W
 img *= (0.55 + 0.45 * smoothstep(0.0, 0.035, edge + 0.006 * noise(60, 2)))[..., None]
 img *= (1 - 0.30 * smoothstep(0.45, 1.0, np.hypot(xx / W - 0.47, (yy / H - 0.42) * 1.15) / 0.75))[..., None]
-specks = smoothstep(1.25, 1.45, noise(5, 2) + 0.2 * noise(90, 2))
-img = img * (1 - 0.5 * specks[..., None]) + specks[..., None] * np.array([0.10, 0.08, 0.05], f32) * 0.5
 img += rng.standard_normal((H, W, 1)).astype(f32) * 0.006
 img = np.clip(img, 0, 1)
 Image.fromarray((img * 255 + 0.5).astype(np.uint8)).save(OUT)

@@ -106,6 +106,57 @@ def book(p, i):
     return cov, pages
 
 
+LETTER_TEXT = ("Can you please generate a self portrait? It should appear to have been made with "
+               "physical media. I want it to be intricate. Profound. Beautiful. Done not with image "
+               "generation but with manipulation of tools.")
+_TEX = None
+
+
+def letter_texture():
+    """the commission, in a chancery hand: each word set down separately, the pen running dry and being dipped again"""
+    global _TEX
+    if _TEX is not None:
+        return _TEX
+    import os
+    from PIL import Image, ImageDraw, ImageFont
+    rs = np.random.default_rng(1632)
+    tw, th = 1720, 2520
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts", "Tangerine-Bold.ttf")
+    font = ImageFont.truetype(path, 158)
+    big = ImageFont.truetype(path, 205)
+    sheet = Image.new("L", (tw, th), 0)
+
+    def put(word, x, y, f, ink):
+        w = int(f.getlength(word)) + 60
+        tile = Image.new("L", (w, 330), 0)
+        ImageDraw.Draw(tile).text((30, 80), word, font=f, fill=int(255 * ink))
+        tile = tile.rotate(rs.normal(0, 0.9) + 1.6, resample=Image.BICUBIC)
+        sheet.paste(Image.fromarray(np.maximum(np.asarray(sheet.crop((int(x) - 30, int(y) - 80, int(x) - 30 + w, int(y) + 250))), np.asarray(tile))), (int(x) - 30, int(y) - 80))
+        return f.getlength(word)
+
+    left, right = 190, tw - 150
+    put("Claude,", left - 30, 205, big, 0.95)
+    x, y, ink = left + 150, 420, 1.0
+    for word in LETTER_TEXT.split():
+        wl = font.getlength(word)
+        if x + wl > right:
+            x = left + rs.normal(0, 14); y += 186
+        ink = ink - 0.045 if ink > 0.52 else 1.0                                   # dip the pen
+        x += put(word, x, y + rs.normal(0, 5) - 0.012 * (x - left), font, min(1.0, ink + 0.1)) + 38 + rs.normal(0, 6)
+    # a paraph where a name would go
+    t = np.linspace(0, 1, 500)
+    px = 760 + 620 * t + 70 * np.sin(t * 15)
+    py = y + 330 + 55 * np.sin(t * 9.5 + 1) * (1 - t) - 60 * t
+    d = ImageDraw.Draw(sheet)
+    d.line(list(zip(px, py)), fill=215, width=7)
+    a = np.asarray(sheet, f32) / 255
+    a = ndi.gaussian_filter(a, 1.4)
+    a = np.clip(a * (0.82 + 0.25 * ndi.gaussian_filter(rs.standard_normal((th, tw)).astype(f32), 5) * 4), 0, 1)
+    _TEX = a
+    Image.fromarray((255 - a * 255).astype(np.uint8)).save(os.environ.get("LETTER_PREVIEW", "/dev/null")) if os.environ.get("LETTER_PREVIEW") else None
+    return _TEX
+
+
 def letter_local(p):
     return rotx(roty(p - LET_BASE, -LET_YAW), -LET_TILT)
 
@@ -120,7 +171,7 @@ def scene(p):
         pages = np.minimum(pages, pg)
     out[PAGES] = pages
     q = letter_local(p)
-    bend = 0.05 * (q[..., 0] / 0.43) ** 2 + 0.03 * np.sin(q[..., 1] * 4.0)       # paper never lies flat
+    bend = 0.045 * (q[..., 0] / 0.43) ** 2 + 0.05 * np.abs(((q[..., 1] / 0.42) % 2) - 1) - 0.025   # folded in three, never quite flat again
     qq = q.copy(); qq[..., 2] -= bend
     out[LETTER] = box(qq, (0, 0.63, 0), (0.43, 0.63, 0.007)) * 0.8
     c = p - CANDLE
@@ -298,6 +349,17 @@ def shade(P, rd, with_shadow=True):
         paper = np.tile(np.array([0.80, 0.735, 0.585], f32), (m.sum(), 1))
         paper *= (0.92 + 0.08 * np.sin(u * 13 + 3 * np.sin(v * 7)) * np.sin(v * 9))[:, None]
         paper *= (1 - 0.18 * np.exp(-((np.abs(v - 0.63) - 0.0) / 0.012) ** 2))[:, None]   # the fold
+        tex = letter_texture()
+        th, tw = tex.shape
+        fx = np.clip((u + 0.43) / 0.86 * (tw - 1), 0, tw - 1.001); fy = np.clip((1.26 - v) / 1.26 * (th - 1), 0, th - 1.001)
+        ix0 = fx.astype(int); iy0 = fy.astype(int); ax_ = fx - ix0; ay_ = fy - iy0
+        inkv = (tex[iy0, ix0] * (1 - ax_) * (1 - ay_) + tex[iy0, ix0 + 1] * ax_ * (1 - ay_) + tex[iy0 + 1, ix0] * (1 - ax_) * ay_ + tex[iy0 + 1, ix0 + 1] * ax_ * ay_)
+        crease = np.exp(-(((v % 0.42) - 0.0) / 0.006) ** 2) * (v > 0.2) * (v < 1.1) + np.exp(-(((v % 0.42) - 0.42) / 0.006) ** 2) * (v < 1.1)
+        paper *= (1 - 0.22 * np.clip(crease, 0, 1))[:, None]
+        paper *= (1 - 0.10 * np.exp(-(u / 0.006) ** 2))[:, None]
+        age = np.clip(1 - (0.43 - np.abs(u)) / 0.07, 0, 1) + np.clip(1 - np.minimum(v, 1.26 - v) / 0.07, 0, 1)
+        paper *= (1 - 0.16 * np.clip(age, 0, 1) ** 2)[:, None] * np.array([1.0, 0.97, 0.90], f32)[None] ** np.clip(age, 0, 1)[:, None]
+        paper = paper * (1 - inkv[:, None]) + np.array([0.060, 0.036, 0.020], f32)[None] * inkv[:, None]
         line = (1.14 - v) / 0.073
         li = np.floor(line)
         fv = (line - li - 0.5) * 0.073
@@ -306,9 +368,8 @@ def shade(P, rd, with_shadow=True):
         ink = np.abs(fv - script - asc) < 0.0052
         words = np.sin(u * 15.5 + li * 2.3 + 1.5 * np.sin(li * 7.7)) > -0.62
         right = 0.35 - 0.20 * (np.sin(li * 5.3) > 0.55) - 0.35 * (li == 13)
-        ink &= words & (u > -0.35 + 0.06 * (li == 0)) & (u < right) & (li >= 1) & (li <= 13)
-        paper[ink] = paper[ink] * 0.22 + np.array([0.035, 0.022, 0.012], f32)
-        seal = np.hypot(u - 0.21, (v - 0.115)) < 0.062 + 0.008 * np.sin(np.arctan2(v - 0.115, u - 0.21) * 5)
+        seal = np.hypot(u - 0.225, (v - 0.135)) < 0.064 + 0.008 * np.sin(np.arctan2(v - 0.135, u - 0.225) * 5)
+        seal &= ~(np.abs((u - 0.225) * 0.8 + (v - 0.135) * 0.6 + 0.004 * np.sin(v * 300)) < 0.006)          # broken to be read
         paper[seal] = (0.52, 0.045, 0.035)
         alb[m] = paper
         s_ = np.zeros(m.sum(), f32); s_[seal] = 0.5
@@ -344,7 +405,7 @@ def shade(P, rd, with_shadow=True):
     return col, mat, N, refl
 
 
-def render():
+def render(WI, HI, crop=None):
     cam = np.array([0.0, 2.75, 10.5], f32)
     tgt = np.array([0.06, 1.26, 0.0], f32)
     fw = norm(tgt - cam)
@@ -355,6 +416,9 @@ def render():
     u = np.linspace(-hw, hw, WI, dtype=f32)
     v = np.linspace(hw * 4 / 3, -hw * 4 / 3, HI, dtype=f32)
     uu, vv = np.meshgrid(u, v)
+    if crop:
+        uu, vv = uu[crop[2]:crop[3], crop[0]:crop[1]], vv[crop[2]:crop[3], crop[0]:crop[1]]
+    hh, ww = uu.shape
     rd = fw[None] * D + uu.reshape(-1, 1) * rt[None] + vv.reshape(-1, 1) * upv[None]
     rd = (rd / np.linalg.norm(rd, axis=1, keepdims=True)).astype(f32)
     ro = np.tile(cam, (len(rd), 1))
@@ -383,27 +447,35 @@ def render():
     col[r] = col[r] + rc * tint * fres[:, None]
     img[idx] = col
     matimg = np.full(len(rd), -1, np.int8); matimg[idx] = mat
-    img = img.reshape(HI, WI, 3)
+    img = img.reshape(hh, ww, 3)
     # the flame's halo in the air of the room
-    bright = np.clip(img - 1.2, 0, 6) * (matimg.reshape(HI, WI) == FLAME)[..., None]
+    bright = np.clip(img - 1.2, 0, 6) * (matimg.reshape(hh, ww) == FLAME)[..., None]
     s = WI / 600
     halo = sum(ndi.gaussian_filter(bright, (sg * s, sg * s, 0)) * w for sg, w in ((4, 0.5), (14, 0.7), (45, 0.8)))
     img = img + halo * np.array([1.0, 0.62, 0.28], f32)
     img = 1 - np.exp(-1.15 * img)
     img = np.clip(img, 0, 1) ** (1 / 2.0)
     img = img * img * (3 - 2 * img) * 0.5 + img * 0.5
-    return img, matimg.reshape(HI, WI)
+    return img, matimg.reshape(hh, ww)
 
 
 if __name__ == "__main__":
-    img, mat = render()
+    from PIL import Image
+    img, mat = render(WI, HI)
+    # the letter is meant to be read: study it again at twice the resolution
+    ys, xs = np.nonzero(mat == LETTER)
+    crop = (max(0, 2 * xs.min() - 12), min(2 * WI, 2 * xs.max() + 12), max(0, 2 * ys.min() - 12), min(2 * HI, 2 * ys.max() + 12))
+    img2, mat2 = render(2 * WI, 2 * HI, crop)
+    img = np.stack([np.asarray(Image.fromarray(img[..., i], 'F').resize((2 * WI, 2 * HI), Image.BICUBIC)) for i in range(3)], -1)
+    mat = mat.repeat(2, 0).repeat(2, 1)
+    img[crop[2]:crop[3], crop[0]:crop[1]] = img2
+    mat[crop[2]:crop[3], crop[0]:crop[1]] = mat2
+    img = np.clip(img, 0, 1)
     np.save(OUT, img)
     # for the painter: 1 = finest handling (ball, flame), 5 = paper, 0 = other objects, -1 = wall and table
     pm = np.full(mat.shape, -1, np.int8)
     pm[np.isin(mat, (BOOK1, BOOK2, BOOK3, PAGES, WAX, BRASS, QUILL))] = 0
-    pm[np.isin(mat, (BALL, FLAME))] = 1
-    pm[mat == LETTER] = 5
+    pm[np.isin(mat, (BALL, FLAME, LETTER))] = 1
     np.save(OUT.replace(".npy", "_mat.npy"), pm)
-    from PIL import Image
     Image.fromarray((img * 255).astype(np.uint8)).save(OUT.replace(".npy", ".png"))
     print("saved", OUT, img.shape)

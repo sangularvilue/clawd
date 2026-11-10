@@ -40,8 +40,9 @@ best lines, the song and its biggest moment. Will picks a theme and a song (or s
 2. **A song that hypes on its own**, approved by Will (Gate 2).
 3. **A one-sentence premise and a story arc.** Not a montage: a question raised, pressure, a turn, a payoff,
    a handoff. If the shots could be shuffled without loss, it is a montage.
-4. **A motif in sound and picture** that interrupts the speech and pays off at the end: the phone that keeps
-   ringing, the bell that tolls after each question. New every week; never a copy of the last one.
+4. **One thing that holds it together.** Something the film keeps coming back to, so it feels made rather than
+   assembled, and that means more the last time than the first. It can be a sound, an image, a phrase, a way
+   of cutting, a color. It comes out of the theme, and it is never last week's device again.
 5. **Great words, used sparingly.** A speech is cut down to its spine (the thesis, the lines everyone would
    quote, the close) and spread out, so the music and pictures get long stretches to themselves. A good target
    is a fifth of the running time; half is a speech with pictures. Ending on the voice works. No clipped words.
@@ -56,7 +57,8 @@ best lines, the song and its biggest moment. Will picks a theme and a song (or s
 9. **A cast that fits the theme.** Faces over hardware, and people the viewer can see himself in. Who they are
    follows from what the film is saying; it is not a standing list. No face twice, apart from deliberate recaps.
 10. **Varied shot lengths.** Half-beat strobes and three-second holds in the same film; emotional shots held longer.
-11. **No graphics clutter.** No captions, squiggles or slam cards. One quiet serif line at the very end.
+11. **No graphics clutter.** No captions, squiggles or slam cards. If words go on screen at all, they are few
+    and quiet.
 12. **The ending is handed to the viewer.** The last five seconds turn from the subject to the person watching:
     a line of the speech, a look, a question, a gesture left unfinished. It should not just stop, and it should
     not explain itself.
@@ -88,7 +90,7 @@ Step by step:
 3. **Music bed.** Map the song's bars to beats (`make_bed()` in the edit file splices sections on bar lines with
    a 30 ms crossfade). Decide the beat of the drop and of the lift; everything else is placed relative to them.
 4. **Timeline.** Lay the phrases on the beat grid so that key words land on musical events (a question ends on
-   the drum entrance; "came of age" ends on the key change). Leave gaps for the motif.
+   the drum entrance; a line ends on the key change). Leave room for the music and for whatever ties the film together.
 5. **Sourcing brief.** One slot per phrase or beat, each saying *what the picture is for* and what words it sits
    under; best moment in the first second; resolution floor; sources to use and to avoid; a second take for the
    important ones. Parallel agents, one log file each (`media/sources_<week>_<agent>.md`).
@@ -117,7 +119,8 @@ Step by step:
 
 ## Standing notes (Will's taste, from his notes on earlier cuts)
 
-- The phone that kept interrupting the speeches was the best idea so far: motifs that interrupt, then pay off.
+- The phone that kept interrupting the speeches was a great idea for that film. It is an example of a film having
+  its own device, not a device to repeat.
 - Words tied to images. Speeches can be cut up and spread out.
 - First half black and white, second half color, the rocket as the dividing line: liked. Do not repeat the
   rocket-as-divider every week; keep the principle.
@@ -130,7 +133,8 @@ Step by step:
 - Lips in sync or do not show the speaker.
 - On "History Will Ask" mockup 1: too much of the speech was left in (it ran the whole passage, about half the
   film); he likes the speech and likes ending on it. Too many clips repeated from the previous video. The
-  checklist items that copied the phone edit's specifics were rewritten as general principles.
+  checklist items that copied the phone edit's specifics (4, 7, 9, 11, 12, 13) were rewritten as general
+  principles: the checklist describes what makes any of these work, not how that one was built.
 
 ## Theme bank (each is a summons with a speech behind it)
 

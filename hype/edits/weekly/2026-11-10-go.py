@@ -7,6 +7,7 @@ The words: President Kennedy at Rice Stadium, 12 September 1962 ("But why, some 
 go to the Moon... not because they are easy, but because they are hard... one we are unwilling to postpone,
 and one we intend to win"). What holds it together: the Mission Control go/no-go poll (from the film
 "Apollo 13"): the flight director calls each station and every answer lands on a different American, waiting.
+(The starting-gate shots are from the film "Secretariat": no clean footage of a real Derby break was found.)
 The same call closes the film, and nobody answers it: that station is the viewer.
 
 The turn is WAIT -> GO, not then -> now. Before the drop everything is coiled and still (a sprinter settling
@@ -222,7 +223,7 @@ OPEN = layout([
 INTRO = layout([
     S(M0, 'mocr_wait_3'),                                          # 1969: hands clasped at his mouth
     S(M0 + 2.7, 'mach_wait_3', speed=0.8),                         # the Viper on its stand at dusk
-    S(M0 + 5.4, 'mocr_wait_4'),                                    # a hand on his head
+    S(M0 + 5.4, 'derby_wait_2', alt=[('mocr_wait_4', 0.0)], **{'in': 0.6}),   # a jockey in the gate lifts his eyes
 ], B)
 
 # ---- 17-61: the build. The poll: every answer over someone coiled. Then Kennedy.
@@ -236,6 +237,7 @@ WAIT = layout([
     S(C_EECOM, 'alert_wait_2'),                                    # "EECOM!"    the helmet goes on          ... "We're go, Flight."
     S(C_GNC, 'scramble_wait'),                                     # "GNC!"      the visor comes down        ... "We're go."
     S(B + 27.0, 'firing_wait'),                                    # the launch director, 2026, looks up
+    S(B + 28.3, 'derby_wait_3', alt=[('mocr_wait_4', 0.0)]),       # the horse's eye through the bars
     J(W('CHOOSE', 26.91) - 0.25, 'CHOOSE'),                        # "We choose to go to the Moon"
     S(W('CHOOSE', 29.13), 'mocr_wait', **{'in': 0.2}),             # "in this decade"
     S(W('CHOOSE', 30.01), 'snap_wait'),                            # "and do the other things,"  (Notre Dame at the line)
@@ -246,7 +248,7 @@ WAIT = layout([
 
 # ---- 61-93: THE DROP. Everything goes at once.
 FIRST = ([S(D, 'derby_go', fx=dict(punch=0.16, bloom=0.3)),      # the gate bursts
-          S(D + 2, 'pad_go', fx=dict(bloom=0.3))]                # five engines light
+          S(D + 2, 'pad_go', fx=dict(bloom=0.3), **{'in': 1.0})]   # five engines light
          if _find('derby_go')[1] else
          [S(D, 'pad_go', fx=dict(punch=0.16, bloom=0.35), **{'in': 1.1}),   # five engines light (the starting gate goes here when it lands)
           S(D + 2.5, 'scramble_go_2')])                          # the takeoff roll
@@ -262,10 +264,10 @@ GO = layout(FIRST + [
     S(D + 15.5, 'indy_go'),                                        # thirty-three cars to the green
     S(D + 17, 'launch_go_3', **{'in': 1.3}),                       # Artemis II climbs past the camera
     S(D + 19.5, 'walkout_2026', **{'in': 1.3}),                    # the crew, striding out
-    S(D + 22, 'mocr_go_2'),                                        # binoculars up at the windows
+    S(D + 22, 'rodeo_go', alt=[('mocr_go_2', 0.0)]),               # the chute gate swings and the bronc is out
     S(D + 23.5, 'snap_go', alt=[('sprint_go', 1.7)]),              # Notre Dame: the snap, the line fires out
-    S(D + 25, 'cat_go', **{'in': 0.7}),                            # the deck crew watch it go off the bow
-    S(D + 26.5, 'drag_go', **{'in': 3.0}),
+    S(D + 25, 'derby_go_2', alt=[('cat_go', 0.7)]),                # the whole field, a length out of the gate
+    S(D + 26.5, 'drag_go_2', alt=[('drag_go', 3.0)]),              # two Top Fuel cars leave in a fireball
     S(BREAK, 'walkout_1969', **{'in': 1.6}),                       # the a-cappella bar: July 1969, a wave
 ], F)
 
@@ -292,10 +294,10 @@ def pairs(*rows):
     return out
 
 
-STROBE = pairs(('sprint_wait', 1.0), ('sprint_go', 0.3), ('cat_wait_2', 0.5), ('cat_go', 0.1),
+STROBE = pairs(('sprint_wait', 1.0), ('sprint_go', 0.3), ('derby_wait', 1.0), ('derby_go', 0.25),
                ('surgeon_wait_2', 1.0), ('surgeon_go', 0.5), ('alert_wait', 0.5), ('alert_go_2', 0.8),
                ('scramble_wait', 1.2), ('scramble_go', 0.3), ('mach_wait', 0.3), ('mach_go', 0.1),
-               ('firing_wait_2', 1.0), ('firing_go', 0.6), ('pad_wait', 3.3), ('pad_go', 1.5))
+               ('rodeo_wait', 1.0), ('rodeo_go', 0.15), ('pad_wait', 3.3), ('pad_go', 1.5))
 
 CLOSE = layout([
     S(F + 24, 'launch_go', speed=1.0),                             # "one we are unwilling to postpone,"

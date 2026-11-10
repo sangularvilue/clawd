@@ -27,9 +27,9 @@ rng = np.random.default_rng(12)
 BRISTLE, BRISTLE2, FLAT, SOFT, ROUND, LINER, PENCIL = ('tanda/oil-01-paint', 'tanda/oil-03-paint', 'tanda/acrylic-04-paint',
                                                         'tanda/oil-06-paint', 'deevad/brush', 'deevad/detail_brush_thin',
                                                         'deevad/2B_pencil')
+POINT = 'deevad/brush#fixed'
 c = Canvas(W, H)
-if START <= 0:
-    c.record(S + '/timelapse.mp4')
+c.record(S + '/tl_%d.mp4' % START)      # one film segment per sitting
 t0 = time.time()
 
 
@@ -42,7 +42,7 @@ def f32(name):
 
 
 def lay(ref, ang, r, grid, brush, thr=0.05, region=None, lmin=3, lmax=9, jit=0.03, op=None, p=0.8,
-        always=False, tol=0.10, detail=None, dpow=1.0, curv=0.3, brush_in=None, inmask=None):
+        always=False, tol=0.10, detail=None, dpow=1.0, curv=0.3, brush_in=None, inmask=None, taper=0.25):
     """One sitting with one brush size: look at the canvas, and wherever it still
     disagrees with the study, mix the colour and lay a stroke along the form."""
     cur = c.array()
@@ -75,7 +75,7 @@ def lay(ref, ang, r, grid, brush, thr=0.05, region=None, lmin=3, lmax=9, jit=0.0
             jx, jy = int(cx_), int(cy_)
             if jx < 0 or jy < 0 or jx >= W or jy >= H:
                 break
-            if i > 1 and np.abs(ref[jy, jx] - ref[iy, ix]).sum() > tol * 3:
+            if i > 2 and np.abs(ref[jy, jx] - ref[iy, ix]).sum() > tol * 3:
                 break
             pts.append((cx_, cy_))
             a1 = float(ang[jy, jx])
@@ -90,7 +90,7 @@ def lay(ref, ang, r, grid, brush, thr=0.05, region=None, lmin=3, lmax=9, jit=0.0
         b = brush
         if brush_in is not None and inmask[iy, ix]:
             b = brush_in
-        c.stroke(b, col, pts, r=r * rng.uniform(0.8, 1.2), op=op, p=p * rng.uniform(0.75, 1.0))
+        c.stroke(b, col, pts, r=r * rng.uniform(0.8, 1.2), op=op, p=p * rng.uniform(0.75, 1.0), taper=taper)
         n += 1
     return n
 
@@ -320,11 +320,11 @@ if START <= 5 and STOP >= 5:
         c.stroke(SOFT, col, [(x, y + (16 if under else 0)), (x + rng.uniform(120, 340), y + rng.normal(0, 14) + (16 if under else 0))],
                  r=rng.uniform(16, 40), p=0.55, op=0.4)
     # a waterfall frozen in its cleft on the dark flank
-    for i in range(40):
+    for i in range(0):
         t = rng.random()
-        x = 1235 + 26 * t + rng.normal(0, 16); y = 700 + 300 * t
-        c.stroke(BRISTLE2, np.array([0.085, 0.09, 0.15]) * rng.uniform(0.8, 1.3), [(x - 30, y), (x - 24 + rng.normal(0, 6), y + rng.uniform(40, 90))], r=rng.uniform(8, 15), p=0.8)
-    for i in range(60):
+        x = 1235 + 26 * t + rng.normal(0, 9); y = 700 + 300 * t
+        c.stroke(BRISTLE2, np.array([0.15, 0.16, 0.26]) * rng.uniform(0.8, 1.2), [(x - 14, y), (x - 10 + rng.normal(0, 4), y + rng.uniform(40, 90))], r=rng.uniform(5, 9), p=0.7, op=0.7)
+    for i in range(34):
         t = rng.random()
         x = 1232 + 30 * t + rng.normal(0, 5 + 5 * t); y = 690 + 320 * t
         c.stroke(ROUND, np.array([0.70, 0.78, 0.93]) * rng.uniform(0.85, 1.08), [(x, y), (x + rng.normal(0, 2), y + rng.uniform(18, 60))], r=rng.uniform(1.4, 3.6), p=0.75, taper=0.4)
@@ -334,20 +334,33 @@ if START <= 5 and STOP >= 5:
     def inriver(x, y):
         ry = np.interp(x, RIVL[:, 0], RIVL[:, 1]); wd = np.interp(x, RIVL[:, 0], [160, 138, 112, 92, 70])
         return x < 1660 and abs(y - ry) < wd * 0.5 + 8
+    for i in range(1500):     # first the woods as dark masses
+        left = rng.random() < 0.6
+        x = rng.uniform(-30, 1680) if left else rng.uniform(2560, 3870)
+        top = np.interp(x, LSP[:, 0], LSP[:, 1], right=1340) if left else np.interp(x, RSP[:, 0], RSP[:, 1])
+        bot = float(ED[int(min(max(x, 0), W - 1))]) - 6
+        if bot <= top + 6:
+            continue
+        y = rng.uniform(top + 6, bot)
+        if left and inriver(x, y):
+            continue
+        dep = min(max((y - 1000) / 470.0, 0), 1)
+        col = (np.array([0.06, 0.08, 0.115]) if left else np.array([0.105, 0.115, 0.195])) * rng.uniform(0.75, 1.3) + np.array([0.12, 0.11, 0.17]) * (1 - dep) ** 2
+        c.stroke(BRISTLE, col, [(x, y - rng.uniform(10, 30)), (x + rng.normal(0, 6), y + rng.uniform(8, 26))], r=rng.uniform(10, 22), p=0.85)
     trees = []
     for i in range(900):
         x = rng.uniform(-30, 1680)
         top = np.interp(x, LSP[:, 0], LSP[:, 1], right=1340)
-        y = rng.uniform(top - 4, float(ED[int(min(max(x, 0), W - 1))]) - 4)
+        y = rng.uniform(top - 4, max(float(ED[int(min(max(x, 0), W - 1))]) - 4, top))
         if y > top - 5 and not inriver(x, y):
-            trees.append((y, x, (16 + 70 * ((y - 1000) / 470.0) ** 1.3) * rng.uniform(0.7, 1.3), 0))
+            trees.append((y, x, (24 + 95 * ((y - 1000) / 470.0) ** 1.3) * rng.uniform(0.7, 1.3), 0))
     for i in range(520):
         x = rng.uniform(2560, 3870)
         top = np.interp(x, RSP[:, 0], RSP[:, 1])
-        y = rng.uniform(top - 4, float(ED[int(min(max(x, 0), W - 1))]) - 4)
+        y = rng.uniform(top - 4, max(float(ED[int(min(max(x, 0), W - 1))]) - 4, top))
         if y > top - 5:
-            trees.append((y, x, (16 + 70 * ((y - 1000) / 470.0) ** 1.3) * rng.uniform(0.7, 1.3), 1))
-    for i in range(260):      # tree-line straggling up the mountain feet
+            trees.append((y, x, (24 + 95 * ((y - 1000) / 470.0) ** 1.3) * rng.uniform(0.7, 1.3), 1))
+    for i in range(0):
         x = rng.choice([rng.uniform(0, 1750), rng.uniform(2380, 3840)])
         y = rng.uniform(1030, 1105) if x < 1900 else rng.uniform(1050, 1125)
         if y > float(R2[int(x)]) + 40:
@@ -410,26 +423,31 @@ if START <= 5 and STOP >= 5:
     log('village done')
     c.off = (0.0, 0.0)
     # the blasted tree: dead wood on the side he has come from
-    tr = [(628, 1745), (640, 1560), (668, 1330), (690, 1100), (715, 900), (728, 790)]
-    for j in range(5):
-        c.stroke(BRISTLE2, np.array([0.075, 0.065, 0.075]) * rng.uniform(0.8, 1.3), [(x + (j - 2) * 9 * (1 - i / 7.0), y) for i, (x, y) in enumerate(tr)],
-                 r=24 - j, p=0.9, taper=0.03)
-    for (x0, y0, dx, dy) in [(730, 792, 30, -70), (722, 800, -22, -46), (716, 830, 16, -40)]:      # splintered top
-        c.stroke(ROUND, (0.07, 0.06, 0.07), [(x0, y0), (x0 + dx, y0 + dy)], r=7, p=0.9, taper=0.6)
-    for (t, sd, ln, up) in [(0.50, 1, 330, 0.35), (0.62, -1, 260, 0.5), (0.74, 1, 210, 0.2), (0.36, -1, 190, 0.3), (0.84, -1, 120, 0.6)]:
+    tr = [(628, 1745), (636, 1600), (660, 1420), (668, 1250), (700, 1080), (706, 930), (735, 800)]
+    for j in range(9):
+        wv = [(x + (j - 4) * 7.5 * (1 - 0.55 * i / 6.0) + rng.normal(0, 4), y + rng.normal(0, 8)) for i, (x, y) in enumerate(tr)]
+        c.stroke(BRISTLE2, np.array([0.085, 0.07, 0.075]) * rng.uniform(0.7, 1.5) + (0.03 if j > 5 else 0.0), wv, r=rng.uniform(14, 22), p=0.9, taper=0.05)
+    for (x0, y0, dx, dy) in [(738, 800, 26, -95), (728, 806, -20, -50), (722, 835, 12, -44)]:      # splintered top
+        c.stroke(ROUND, (0.075, 0.062, 0.07), [(x0, y0), (x0 + dx * 0.4 + rng.normal(0, 3), y0 + dy * 0.5), (x0 + dx, y0 + dy)], r=8, p=0.9, taper=0.7)
+    for (t, sd, ln, up) in [(0.52, 1, 300, 0.45), (0.66, -1, 230, 0.6), (0.80, 1, 150, 0.35), (0.40, -1, 150, 0.2)]:
         i = t * (len(tr) - 1); k_ = int(i); f = i - k_
         x = tr[k_][0] + (tr[k_ + 1][0] - tr[k_][0]) * f; y = tr[k_][1] + (tr[k_ + 1][1] - tr[k_][1]) * f
         pts = [(x, y)]
         a_ = -up
-        for q in range(5):
-            x += sd * ln / 5 * math.cos(a_); y += ln / 5 * math.sin(a_)
-            a_ += rng.normal(0.12, 0.25)
+        for q in range(6):
+            x += sd * ln / 6 * math.cos(a_); y += ln / 6 * math.sin(a_)
+            a_ += rng.normal(-0.02, 0.32)
             pts.append((x, y))
-        c.stroke(ROUND, (0.07, 0.06, 0.075), pts, r=11, p=0.9, taper=0.75)
-        c.stroke(FLAT, (0.46, 0.50, 0.72), [(px, py - 9) for (px, py) in pts[:4]], r=4.5, p=0.75, taper=0.4)
-        for q in (2, 3):
-            c.stroke(ROUND, (0.07, 0.06, 0.075), [pts[q], (pts[q][0] + sd * rng.uniform(30, 70), pts[q][1] - rng.uniform(30, 80))], r=4, p=0.85, taper=0.7)
-    c.stroke(ROUND, (1.0, 0.74, 0.52), [(x + 22 - i * 2.2, y) for i, (x, y) in enumerate(tr)], r=2.6, p=0.7, op=0.85)
+        c.stroke(ROUND, (0.075, 0.062, 0.075), pts, r=10, p=0.9, taper=0.8)
+        c.stroke(FLAT, (0.44, 0.48, 0.70), [(px, py - 7) for (px, py) in pts[1:4]], r=3.5, p=0.7, taper=0.4)
+        for q in (2, 4):
+            c.stroke(ROUND, (0.075, 0.062, 0.075), [pts[q], (pts[q][0] + sd * rng.uniform(20, 50), pts[q][1] - rng.uniform(40, 90))], r=3.5, p=0.85, taper=0.8)
+    for k_ in range(len(tr) - 1):        # the dawn just touching its sunward edge, broken
+        if rng.random() < 0.75:
+            (xa, ya), (xb, yb) = tr[k_], tr[k_ + 1]
+            f0, f1 = sorted(rng.uniform(0, 1, 2))
+            off = 26 * (1 - 0.55 * k_ / 6.0)
+            c.stroke(ROUND, (0.95, 0.68, 0.50), [(xa + (xb - xa) * f0 + off, ya + (yb - ya) * f0), (xa + (xb - xa) * f1 + off, ya + (yb - ya) * f1)], r=1.8, p=0.6, op=0.7)
     # and living evergreens on the side of the light
     spruce(3330, 1730, 440, dark=(0.06, 0.085, 0.085), warm=(0.98, 0.78, 0.62), sun=-1)
     spruce(3640, 1860, 1000, dark=(0.05, 0.075, 0.075), warm=(0.98, 0.78, 0.62), sun=-1)
@@ -455,7 +473,7 @@ if START <= 5 and STOP >= 5:
         dx, dy = xs[i + 1] - xs[i], ys[i + 1] - ys[i]
         Ln = math.hypot(dx, dy); dx, dy = dx / Ln, dy / Ln
         scl = 0.18 + 0.9 * (y - YH) / (H - YH)
-        ln = 96 * scl
+        ln = 150 * scl
         px, py = x - dy * side * ln * 0.42 + rng.normal(0, 3) * scl, y + dx * side * ln * 0.22
         a = math.atan2(dy * 0.5, dx) + rng.normal(0, 0.18)
         ca, sa = math.cos(a), math.sin(a)
@@ -505,12 +523,17 @@ if START <= 5 and STOP >= 5:
 if START <= 6 and STOP >= 6:
     reg = maskd
     c.frame_every = 450
+    ref = f32('ref8'); ang = G['ang8'].astype(np.float32)
+    n = lay(ref, ang, 7.0, 6, POINT, thr=0.04, region=reg, lmin=4, lmax=11, jit=0.02, p=0.9, tol=0.08, curv=0.4, taper=0.15)
+    log('figures 7px', n)
     ref = f32('ref4'); ang = G['ang4'].astype(np.float32)
-    n = lay(ref, ang, 3.8, 3.6, ROUND, thr=0.045, region=reg, lmin=3, lmax=10, jit=0.02, p=0.85, tol=0.07, curv=0.4)
-    log('figures 4px', n)
+    for k_ in range(2):       # look again, correct again
+        n = lay(ref, ang, 4.0, 3.6, POINT, thr=0.035, region=reg, lmin=4, lmax=11, jit=0.018, p=0.9, tol=0.07, curv=0.4, taper=0.15)
+        log('figures 4px', n)
     ref = f32('ref2'); ang = G['ang2'].astype(np.float32)
-    n = lay(ref, ang, 2.1, 2.2, ROUND, thr=0.06, region=reg, lmin=3, lmax=9, jit=0.015, p=0.85, tol=0.07, curv=0.4)
-    log('figures 2px', n)
+    for k_ in range(2):
+        n = lay(ref, ang, 2.2, 2.2, POINT, thr=0.045, region=reg, lmin=4, lmax=10, jit=0.012, p=0.9, tol=0.07, curv=0.4, taper=0.15)
+        log('figures 2px', n)
     snap('6_figures')
 
 # ------------------------------------------------------------------ stage 7: accents
@@ -522,14 +545,16 @@ if START <= 7 and STOP >= 7:
         c.stroke(FLAT, (1.0, 0.99, 0.90), [(SX + d * math.cos(a), SY + d * math.sin(a)), (SX + d * math.cos(a) + rng.normal(0, 9), SY + d * math.sin(a) + rng.normal(0, 5))],
                  r=rng.uniform(6, 11), p=0.95)
     # the shaft of light between them laid broken on the snow, and sparkle along the drift crests
-    for i in range(260):
-        t = rng.random() ** 0.8
-        y = 1675 + t * 470
+    for i in range(110):
+        t = rng.random() ** 1.6
+        y = 1690 + t * 300
         x = SX + (y - YH) * rng.normal(0.0, 0.035) + rng.normal(0, 14)
         c.stroke(FLAT, np.array([1.0, 0.90, 0.72]) * rng.uniform(0.92, 1.0), [(x, y), (x + rng.uniform(14, 60) * (0.5 + t), y + rng.normal(0, 2))],
-                 r=rng.uniform(2.5, 6) * (0.6 + t), p=0.8, op=0.75)
+                 r=rng.uniform(2.5, 5) * (0.6 + t), p=0.7, op=0.5)
     for i in range(500):
         x = SX + rng.normal(0, 520); y = YH + 8 + abs(rng.normal(0, 190))
+        if x < 0 or x >= W or maskd[int(y), int(x)]:
+            continue
         c.stroke(ROUND, (1.0, 0.95, 0.80), [(x, y), (x + rng.uniform(4, 18), y + rng.normal(0, 1))], r=rng.uniform(1.2, 2.6), p=0.8)
     # morning star
     c.stroke(ROUND, (1.0, 0.98, 0.92), [(3184, 318), (3186, 319)], r=4.0, p=1.0, taper=0.01)
@@ -545,6 +570,22 @@ if START <= 7 and STOP >= 7:
         cx_, cy_ = P3(0.10, 0.345, zz)
         c.stroke(ROUND, gold, [(cx_, cy_ - 20), (cx_, cy_ + 22)], r=2.3, p=0.9, taper=0.1)
         c.stroke(ROUND, gold, [(cx_ - 13, cy_ - 6), (cx_ + 13, cy_ - 6)], r=2.3, p=0.9, taper=0.1)
+    # the fallen log he sits on: bark, the sawn end, snow lying along it
+    for i in range(170):
+        x, y = P3(rng.uniform(0.80, 1.62), rng.uniform(0.04, 0.43), 0.22)
+        col = np.array([0.20, 0.15, 0.12]) * rng.uniform(0.5, 1.6) + rng.normal(0, 0.01, 3)
+        c.stroke(BRISTLE2, col, [(x, y), (x + rng.uniform(40, 130), y + rng.normal(0, 4))], r=rng.uniform(3, 7), p=0.7, op=0.75)
+    ex, ey = P3(1.61, 0.235, 0.05)
+    for i in range(26):
+        a0 = rng.uniform(0, 6.28)
+        rr_ = rng.uniform(0.2, 1.0)
+        c.stroke(FLAT, np.array([0.50, 0.38, 0.27]) * rng.uniform(0.75, 1.15), [(ex + 26 * rr_ * math.cos(a0), ey + 118 * rr_ * math.sin(a0)),
+                 (ex + 26 * rr_ * math.cos(a0 + 0.7), ey + 118 * rr_ * math.sin(a0 + 0.7))], r=rng.uniform(4, 8), p=0.8)
+    for i in range(150):
+        x, y = P3(rng.uniform(0.84, 1.66), 0.47 + rng.normal(0, 0.012), 0.05)
+        lit_ = rng.random() < 0.3
+        col = (np.array([0.96, 0.84, 0.78]) if lit_ else np.array([0.60, 0.65, 0.88])) * rng.uniform(0.92, 1.05)
+        c.stroke(FLAT, col, [(x, y - (5 if lit_ else 0)), (x + rng.uniform(20, 70), y + rng.normal(0, 2) - (5 if lit_ else 0))], r=rng.uniform(4, 10) * (0.5 if lit_ else 1), p=0.8)
     # a tear taking the light on the penitent's cheek
     tx, ty = P3(0.035, 0.955, 0.06)
     c.stroke(ROUND, (1.0, 0.93, 0.78), [(tx - 1, ty - 9), (tx, ty)], r=1.2, p=0.7)
@@ -555,8 +596,10 @@ if START <= 7 and STOP >= 7:
         for i in range(n_):
             t = rng.random()
             x, y = P3(X0 + (X1 - X0) * t + rng.normal(0, sp), Y0 + (Y1 - Y0) * t + rng.normal(0, sp * 0.5), Z + rng.normal(0, 0.12))
-            c.stroke(FLAT, np.array([0.80, 0.84, 0.98]) * rng.uniform(0.9, 1.03), [(x, y), (x + rng.uniform(2, 9), y + rng.normal(0, 1.5))],
-                     r=rng.uniform(1.6, 4.2), p=0.85)
+            if rng.random() < 0.5:
+                continue
+            c.stroke(POINT, np.array([0.70, 0.75, 0.93]) * rng.uniform(0.9, 1.05), [(x, y), (x + rng.uniform(1, 3), y + rng.normal(0, 1))],
+                     r=rng.uniform(1.8, 3.6), p=0.8, op=0.8, taper=0.02)
     # last flakes of the departing storm, flicked on over the dark wood
     for i in range(900):
         x = abs(rng.normal(0, 900)); y = rng.uniform(0, H)
@@ -565,5 +608,6 @@ if START <= 7 and STOP >= 7:
         r_ = 1.2 + 3.0 * rng.random() ** 3
         c.stroke(ROUND, (0.92, 0.94, 1.0), [(x, y), (x + r_ * 0.8, y + r_ * 1.6)], r=r_, p=rng.uniform(0.4, 0.85), op=0.8, taper=0.05)
     snap('7_final')
+c.hold = 150 if STOP >= 7 else 1
 c.finish_recording()
 log('finished:', c.nstrokes, 'brush strokes')

@@ -22,11 +22,23 @@ class Canvas:
         self.off = (0.0, 0.0)
         self.ff = None            # timelapse recorder
         self.frame_every = 50
+        self.hold = 1
 
     def _get(self, name):
         if name not in self._b:
             bi = _brush.BrushInfo()
-            bi.load_from_string(open(BR + name + '.myb').read())
+            fixed = name.endswith('#fixed')
+            bi.load_from_string(open(BR + name.split('#')[0] + '.myb').read())
+            if fixed:
+                # a firm, predictable point for drawing with the brush: size no longer swells with pressure
+                for cname in ('radius_logarithmic', 'offset_by_random', 'radius_by_random', 'offset_by_speed'):
+                    for inp in ('pressure', 'speed1', 'speed2', 'random', 'stroke', 'direction', 'tilt_declination', 'tilt_ascension', 'custom'):
+                        try:
+                            bi.set_points(cname, inp, [])
+                        except Exception:
+                            pass
+                    if cname != 'radius_logarithmic':
+                        bi.set_base_value(cname, 0.0)
             self._bi[name] = bi
             self._b[name] = (_brush.Brush(bi), bi.get_base_value('radius_logarithmic'),
                              bi.get_base_value('opaque'))
@@ -90,7 +102,7 @@ class Canvas:
 
     def finish_recording(self):
         if self.ff is not None:
-            self.grab(repeat=120)
+            self.grab(repeat=self.hold)
             self.ff.stdin.close(); self.ff.wait(); self.ff = None
 
     def load(self, arr):

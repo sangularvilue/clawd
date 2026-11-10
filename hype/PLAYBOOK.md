@@ -75,10 +75,11 @@ best lines, the song and its biggest moment. Will picks a theme and a song (or s
 
 | When | What | Who decides |
 |---|---|---|
-| Saturday | Pitch 2-3 concepts (theme, end line, motif, voices, song and its biggest moment) | Will picks theme + song |
-| Sunday | Script the words on the song's grid; shape the music bed; write the sourcing brief; source | Claude |
-| Sunday night | Optional rough cut for a gut check (labeled as rough) | Will, if he's around |
-| Monday | Assemble, self-review, revise at least twice, deliver the mockup; final render after notes | Claude, then Will |
+| Saturday (scheduled) | Pitch three concepts (theme, words, what holds it together, song and its biggest moment, end line) | Will picks a theme and a song, or sends his own |
+| Monday (scheduled) | Only if he picked: script the words on the song's grid, shape the bed, brief and source, assemble, self-review twice, send a 720p mockup with its weak spots named | Claude |
+| After his notes | Revise; then the 1080p final | Will |
+
+No pick, no build: Monday sends a reminder instead. The sourcing brief template is `BRIEF_TEMPLATE.md`.
 
 Step by step:
 

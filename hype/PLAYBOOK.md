@@ -131,6 +131,19 @@ Step by step:
 - End text is one quiet line. No motion-graphics clutter.
 - 720p24 is acceptable for long edits when 1080p60 would be too heavy to send.
 - Lips in sync or do not show the speaker.
+- On "GO." (10 Nov; Kennedy at Rice, the go/no-go poll, "Stronger"): pitched as one of three concepts before
+  anything was sourced, and he picked it. First cut: "definitely better". After the opening was rebuilt:
+  "fantastic". What he said and what it taught:
+  - "The narration and music at the beginning is disjointed and disorienting": the first cut traded voices
+    (Kennedy, the record's own vocal, the flight director, Kennedy again) over a bed that stopped and restarted.
+    The opening has to be ONE line of thought over ONE continuous build: music from the first frame, one
+    speaker finishes before the next starts, and nothing in the record that sounds like a voice under narration.
+  - "I like what you do with the music just before 1:00": the record drops to a single bare bar and then
+    slams into the finale. A stop before a hit is worth more than a louder hit.
+  - A physical turn (everyone coiled, then everyone released on the drop) carried the film; it did not need
+    black and white, or then-against-now.
+  - Short calls on the beat are not "too much speech": voices were a third of the running time and it never
+    dragged. The limit is on continuous talk.
 - On "History Will Ask" mockup 1: too much of the speech was left in (it ran the whole passage, about half the
   film); he likes the speech and likes ending on it. Too many clips repeated from the previous video. The
   checklist items that copied the phone edit's specifics (4, 7, 9, 11, 12, 13) were rewritten as general
@@ -142,7 +155,7 @@ Step by step:
 - **The torch has been passed** (JFK inaugural): "to a new generation of Americans, born in this century".
 - **The last best hope of earth** (Lincoln, 1862): "we shall nobly save, or meanly lose".
 - **The man in the arena** (T. Roosevelt, 1910): the credit belongs to the one who is actually in it.
-- **We choose to go** (JFK at Rice): "not because they are easy, but because they are hard".
+- **We choose to go** (JFK at Rice): "not because they are easy, but because they are hard". *Made 10 Nov as "GO."*
 - **Freedom is never more than one generation away from extinction** (Reagan, 1961/1967).
 - **The arsenal of democracy** (FDR, 1940), for a Mach-heavy week: builders as the front line.
 - **Duty, honor, country** (MacArthur at West Point, 1962).
@@ -152,6 +165,8 @@ Step by step:
 ## Song bank
 
 - Approved and on disk: "Soldier of Heaven" organ version (`score_organ.py`, `organ_songs/soldier_of_heaven.json`).
+- Used and loved: Kanye, "Stronger" (GO.). Only the clean bars: the bass passage, the first hook, the last
+  eight bars. Map a song's lyrics to bars before building the bed, and leave the verses out if they are not clean.
 - Good candidates Will has named or would fit: Kanye ("POWER", "Stronger", "All of the Lights"), Jay-Z/Rihanna/
   Kanye ("Run This Town"), Sabaton ("Primo Victoria", "The Last Stand"), Fall Out Boy ("My Songs Know..."),
   MGMT ("Little Dark Age").
@@ -162,6 +177,9 @@ Step by step:
 - Starting to source before the theme was agreed: a day of footage for a concept that got dropped.
 - Filling gaps with clips from earlier weeks "as alternates": they stay in, and he notices.
 - Loving the speech too much to cut it.
+- Building a second concept without pitching it either ("History Will Ask"): two mockups, "at best meh". The
+  pitch costs five minutes; skipping it cost a day.
+- Opening on a cold silence, then a sample, then a different section of the song: three starts in ten seconds.
 - A sourcing agent's "ok" is not a review: open the contact sheet of every clip before it goes in.
 - Loudness-normalizing a bell flattens its decay; ring-outs get static gain only.
 - A voice over a full chorus needs the music ducked to about 40-50% and the voice a little hot; then check it

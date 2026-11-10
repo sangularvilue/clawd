@@ -17,13 +17,16 @@ The words are the close of Reagan's commencement address at Notre Dame, 17 May 1
 The motif is a BELL: history asking. It tolls after each question; each question is answered, in black and
 white, by the generation it was put to (the Depression's builders, the men on the ramp, the Moon and the Wall).
 On "history someday record:" the song's chorus drops, the picture turns to color, and the bell is ours: today's
-Americans answering. The sentence finishes across the key change ("came of age" -> liftoff). After the last
-chord, silence, one toll, and a hand reaching for the bell. End line: "History is asking."
+Americans answering. The sentence finishes across the key change ("came of age" -> Artemis II lifts off) and
+over the generation it describes. On the last chord every bell rings and Reagan hands it over ("And now,
+they're yours to protect and pass on."). Then silence, one toll, and two children's white-gloved hands at the
+Liberty Bell; we stop before they touch it. End line: "History is asking."
 
 Song bed (make_bed(); 96 BPM; beats of the edit, the music enters at beat 12 after a cold open):
   12-28 the synth intro and drum fill, 28-78 verse 1 with no singer (the band only), all lo-fi under the voice;
   78 chorus 3 at full fidelity with the organ on the vocal line; 110 the key change, full organ;
-  142 the final chord; 150 the organ lets go; ring-out to ~155.
+  142 the final chord; 150 the organ lets go; ring-out to ~155; 154-168 silence and the last toll.
+Run `python3 edits/weekly/2026-11-09-history.py bed bell` once to build the bed, the tuned bells and the last shot.
 """
 import os
 import subprocess
@@ -402,7 +405,7 @@ CHORUS = layout([
     S(90.0, 'build_crew'),                                                    # the wall goes up
     S(91.0, 'relay_handoff_2'),                                               # the baton
     S(93.0, 'huddle_hands', **{'in': 1.3}),                                   # the break
-    S(94.0, 'nd_helmets', alt=[('tunnel_run', 0.5)], crop=(0.0, 0.1, 0.86, 0.86), **{'in': 0.2}),  # Notre Dame, gold helmets under the lights
+    S(94.0, 'nd_helmets', alt=[('tunnel_run', 0.5)], crop=(0.0, 0.1, 0.86, 0.86), **{'in': 1.35}),  # Notre Dame, gold helmets under the lights
     S(95.0, 'mission_control_cheer_2', **{'in': 0.3}),                        # Artemis II is home
     S(97.0, 'surgical_team', alt=[('young_welder', 0.0)]),                    # the team at the table
     S(98.0, 'fire_crew_2', alt=[('mach_team_3', 0.0)]),                       # the line holds

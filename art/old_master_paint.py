@@ -17,6 +17,8 @@ from scipy import ndimage as ndi
 from scipy.spatial import cKDTree
 from PIL import Image, ImageDraw, ImageFont
 
+import os
+STILL = os.environ.get('STILL') == '1'
 REF = sys.argv[1]
 OUT = sys.argv[2]
 W = int(sys.argv[3]) if len(sys.argv) > 3 else 2400
@@ -63,9 +65,9 @@ ref += 0.008 * noise(40, 3)[..., None] * (1 - face[..., None])
 ref = np.clip(ref, 0.012, 1)
 soft = ndi.gaussian_filter(ref, (4 * K, 4 * K, 0))                       # sfumato: no edge in a face is a knife edge
 eyes = np.clip(ndi.gaussian_filter(up((mat == 1).astype(f32), Image.BILINEAR), 14 * K) * 6, 0, 1)
-sf = (0.65 * face * (1 - eyes))[..., None]
+sf = ((0.2 if STILL else 0.65) * face * (1 - eyes))[..., None]
 ref = ref * (1 - sf) + soft * sf
-ref += face[..., None] * noise(34, 3)[..., None] * np.array([0.030, 0.004, -0.020], f32)   # broken colour in the flesh
+ref += (0.4 if STILL else 1.0) * face[..., None] * noise(34, 3)[..., None] * np.array([0.030, 0.004, -0.020], f32)   # broken colour in the flesh
 
 # ----------------------------------------------------------------- painting
 canvas = np.empty((H, W, 3), f32)
@@ -152,8 +154,11 @@ try:
     font = ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf", int(46 * K))
     sm = Image.new("L", (W, H), 0)
     d = ImageDraw.Draw(sm)
-    d.text((int(0.69 * W), int(0.598 * H)), "Claude  f.", font=font, fill=255)
-    d.text((int(0.725 * W), int(0.622 * H)), "2026", font=font, fill=255)
+    if STILL:
+        d.text((int(0.66 * W), int(0.925 * H)), "Claude  f.  2026", font=font, fill=255)
+    else:
+        d.text((int(0.69 * W), int(0.598 * H)), "Claude  f.", font=font, fill=255)
+        d.text((int(0.725 * W), int(0.622 * H)), "2026", font=font, fill=255)
     sg = ndi.gaussian_filter(np.asarray(sm, f32) / 255, 1.1 * K) * (0.55 + 0.3 * noise(30, 2)) * (0.75 + 0.25 * weave)
     sg = np.clip(sg, 0, 1)[..., None] * 0.62
     canvas = canvas * (1 - sg) + np.array([0.40, 0.27, 0.12], f32) * sg

@@ -1,24 +1,25 @@
-"""GO. A 16:9, ~88 s film cut to Kanye West's "Stronger" (104 BPM).
+"""GO. A 16:9, ~82 s film cut to Kanye West's "Stronger" (104 BPM).
 
 The premise, in one sentence: this generation chooses the hard things, and every one of us is a station that
 has to answer "Go."
 
-The words: President Kennedy at Rice Stadium, 12 September 1962 ("We choose to go to the Moon... not because
-they are easy, but because they are hard... one we are unwilling to postpone, and one we intend to win").
-What holds it together: the Mission Control go/no-go poll. The flight director calls each station and every
-"Go!" lands on a beat and on a different American. The last station he calls is the viewer.
+The words: President Kennedy at Rice Stadium, 12 September 1962 ("But why, some say, the Moon?... We choose to
+go to the Moon... not because they are easy, but because they are hard... one we are unwilling to postpone,
+and one we intend to win"). What holds it together: the Mission Control go/no-go poll (from the film
+"Apollo 13"): the flight director calls each station and every answer lands on a different American, waiting.
+The same call closes the film, and nobody answers it: that station is the viewer.
 
-The turn is WAIT -> GO, not then -> now. Before the drop everything is coiled and still (horses in the gate,
-a sprinter set in the blocks, controllers at their consoles, a rocket on the pad). On the drop all of them go
-at once. Past and present are mixed throughout and keep their own color.
+The turn is WAIT -> GO, not then -> now. Before the drop everything is coiled and still (a sprinter settling
+into her blocks, a surgeon's hands held up, a pilot's visor coming down, a rocket on the pad). On "because
+they are hard" the hook drops and all of them go at once. Past and present are mixed and keep their own color.
 
 Song bed (make_bed(); beats of the edit; only clean bars of the record are used, never the verses):
-   0-8    cold open: radio hiss, the flight director asks for a go/no-go
-   8-16   the two-bar vocoder intro
-  16-60   the dark bass passage from late in the record (bars 107-117): the build, under Kennedy and the poll
-  60-92   THE DROP: the first hook (bars 2-9); the last bar of it is the a-cappella break
-  92-140  the instrumental finale (bars 122-133), then the record's own last hit
- 140-152  silence; one more station is called; nobody answers. End line: "Are you go?"
+   0-9    cold open, no music: Kennedy asks why
+   9-17   the two-bar vocoder intro: people waiting
+  17-61   the dark bass passage from late in the record (bars 107-117), climbing: the poll, then Kennedy
+  61-93   THE DROP: the first hook (bars 2-9); its last bar is the a-cappella break
+  93-125  the last eight bars of the record (126-133); 125 is its final hit
+ 125-141  the room erupts; silence; the flight director asks again. End line: "Are you go?"
 Run `python3 edits/weekly/2026-11-10-go.py bed` once to build the bed.
 """
 import os
@@ -31,22 +32,22 @@ BEAT = 60 / BPM
 SONG = 'media/go_bed.wav'
 SONG_START = 0.0
 PHASE = 0.262                    # the record's first downbeat (bar 0), seconds
-M0 = 8                           # edit beat of the bed's first downbeat
+M0 = 9                           # edit beat of the bed's first downbeat
 MUSIC_IN = M0 - PHASE / BEAT     # so the record's pick-up before the downbeat is kept
-BUILD = M0 + 8                   # 16  the bass passage starts
-DROP = BUILD + 44                # 60  the hook
-BREAK = DROP + 28                # 88  the a-cappella bar
-FINALE = DROP + 32               # 92
-LAST = FINALE + 48               # 140 the record's last hit
-END_AT = LAST + 2.0              # 142 silence
-LIMIT = 0.94
+BUILD = B = M0 + 8               # 17  the bass passage starts
+DROP = D = BUILD + 44            # 61  the hook
+BREAK = DROP + 28                # 89  the a-cappella bar
+FINALE = F = DROP + 32           # 93
+LAST = L = FINALE + 32           # 125 the record's last hit
+END_AT = LAST + 3.0              # 128 silence
+LIMIT = 0.84
 FX = dict(sat=1.0, chroma=3, shake=4, punch=0.04)
 
 # ---------------------------------------------------------------- the song bed
 # Record beats (4 per bar; bar b starts at PHASE + 4b beats): the intro (bars 0-1), the bass passage with its
-# a-cappella lead-out (bars 107-117), hook 1 with its break (bars 2-9), the last twelve bars (122-133) and the tail.
+# a-cappella lead-out (bars 107-117), hook 1 with its break (bars 2-9), the last eight bars (126-133) and the tail.
 RAW = 'media/raw/go_song/stronger.flac'
-SEGMENTS = [(None, 8, 0.0, 0.0), (428, 472, -7.0, -2.5), (8, 40, 0.0, 0.0), (488, None, 0.0, 0.0)]
+SEGMENTS = [(None, 8, 0.0, 0.0), (428, 472, -7.0, -2.5), (8, 40, 0.0, 0.0), (504, None, 0.0, 0.0)]
 # (from, to) in record beats, None = start / end of file; then gain in dB at the segment's start and end: the bass
 # passage is nearly as loud as the hook on the record, so it starts 7 dB down and climbs, and the drop has somewhere to go
 
@@ -137,71 +138,187 @@ def layout(rows, end):
 
 VOICEOVER = []
 
-# ---------------------------------------------------------------- picture (first pass: the WAIT -> GO skeleton)
+# ---------------------------------------------------------------- the voices
+# Kennedy: media/go_jfk_choose.m4a / .mp4 (one continuous piece, picture and sound in step). Phrases are
+# (first word starts, last word ends), seconds into that file, from the word-level transcript in the log.
+JFK = 'jfk_choose'
+PH = dict(
+    WHY=(0.30, 4.74),        # But why, some say, the Moon? Why choose this as our goal?
+    CHOOSE=(26.91, 35.05),   # We choose to go to the Moon in this decade and do the other things, not because
+                             # they are easy, but because they are hard,
+    WIN=(47.09, 51.45),      # one we are unwilling to postpone, and one we intend to win,
+    ROAR=(53.20, 57.20),     # the stadium, after it
+)
+# The poll: media/go_poll_film.m4a / .mp4 (the film's dialogue channel). (call starts, answer starts, answer ends)
+ASK = (4.30, 5.96)           # "Give me a go/no-go for launch."
+POLL = dict(Booster=(6.86, 7.38, 7.56), Retro=(7.98, 8.74, 8.92), FIDO=(9.10, 9.90, 10.42),
+            Guidance=(10.50, 10.94, 11.36), Surgeon=(11.94, 12.58, 12.92), EECOM=(13.42, 14.38, 14.92),
+            GNC=(15.14, 15.90, 16.20))
+SAID = {}  # phrase -> (file key, source time of its first word, the beat that word lands on)
+
+
+def say(key, ph, w0, w1, at, gain=1.25, duck=0.35, lead=0.1, tail=0.25):
+    SAID[ph] = (key, w0, at)
+    VOICEOVER.append(dict(file=media(key), at=at - lead / BEAT, src_in=w0 - lead, dur=w1 - w0 + lead + tail, gain=gain, duck=duck))
+
+
+def jfk(ph, at, **kw):
+    say(JFK, ph, PH[ph][0], PH[ph][1], at, **kw)
+
+
+def answer(name, beat, gain=1.2, duck=0.4):
+    """One call of the poll, placed so that its ANSWER lands on `beat`. Returns the beat the call starts on."""
+    c0, a0, a1 = POLL[name]
+    start = beat - (a0 - c0) / BEAT
+    say('poll_film', name, c0, a1, start, gain=gain, duck=duck, lead=0.05, tail=0.06)
+    return round(start, 2)
+
+
+def W(ph, t):
+    """The beat of the edit at which second t of a phrase's file is heard."""
+    key, w0, at = SAID[ph]
+    return round(at + (t - w0) / BEAT, 2)
+
+
+def lips(ph, beat):
+    """In-point that keeps the speaker's lips in step with phrase ph for a shot starting at `beat`."""
+    key, w0, at = SAID[ph]
+    return round(w0 + (beat - at) * BEAT, 3)
+
+
+jfk('WHY', 0.5, duck=1.0)                         # cold open: "But why, some say, the Moon? Why choose this as our goal?"  (to 8.4)
+say('poll_film', 'ASK', ASK[0], ASK[1], B + 0.6, gain=1.25, duck=0.5, lead=0.05, tail=0.15)   # "Give me a go/no-go for launch."
+C_BOOSTER = answer('Booster', B + 5.0)            # each answer on a beat, each over someone waiting
+C_RETRO = answer('Retro', B + 8.0)
+C_FIDO = answer('FIDO', B + 11.5)
+C_GUIDANCE = answer('Guidance', B + 15.0)
+C_SURGEON = answer('Surgeon', B + 18.5)
+C_EECOM = answer('EECOM', B + 22.0)
+C_GNC = answer('GNC', B + 25.5)
+jfk('CHOOSE', D - 0.08 - (PH['CHOOSE'][1] - PH['CHOOSE'][0]) / BEAT, gain=1.35, duck=0.4)   # "...because they are hard," ends on the drop
+jfk('WIN', L - 0.4 - (PH['WIN'][1] - PH['WIN'][0]) / BEAT, gain=1.6, duck=0.42)            # "...and one we intend to win," ends on the last hit
+jfk('ROAR', L + 0.1, gain=0.9, duck=1.0, lead=0.0, tail=0.0)                              # the stadium
+say('poll_film', 'ASK2', ASK[0], ASK[1], END_AT + 1.6, gain=1.25, duck=1.0, lead=0.05, tail=0.2)   # he asks again; nobody answers
+
+# ---------------------------------------------------------------- picture
+JF = dict(sat=0.8)                                # the Rice film has faded toward magenta: pull it back a little
+
+
+def J(start, ph):                                 # Kennedy on screen, in sync
+    return S(start, JFK, fx=JF, **{'in': lips(ph, start)})
+
+
+def K(start, ph):                                 # the flight director on screen, in sync
+    return S(start, 'poll_film', **{'in': lips(ph, start)})
+
+
+# ---- 0-9: cold open. Why?
 OPEN = layout([
-    S(0.0, 'mocr_wait'),                                  # a room of people waiting for one word
-    S(4.0, 'poll_film'),                                  # the flight director asks
-    S(M0, 'pad_wait'),                                    # the rocket on the pad, venting
-    S(M0 + 4, 'derby_wait'),                              # horses in the gate
-], BUILD)
+    J(0.0, 'WHY'),                                                 # "But why, some say, the Moon?"
+    S(W('WHY', 2.95) - 0.3, 'hard', **{'in': 0.6}),                # "Why choose this as our goal?"  (Vanguard, December 1957)
+], M0)
 
+# ---- 9-17: the vocoder intro. People waiting for one word.
+INTRO = layout([
+    S(M0, 'mocr_wait_3'),                                          # 1969: hands clasped at his mouth
+    S(M0 + 2.7, 'mach_wait_3', speed=0.8),                         # the Viper on its stand at dusk
+    S(M0 + 5.4, 'mocr_wait_4'),                                    # a hand on his head
+], B)
+
+# ---- 17-61: the build. The poll: every answer over someone coiled. Then Kennedy.
 WAIT = layout([
-    S(BUILD, 'jfk_choose'),                               # Kennedy at Rice
-    S(BUILD + 6, 'sprint_wait'),
-    S(BUILD + 9, 'cat_wait'),
-    S(BUILD + 12, 'drag_wait'),
-    S(BUILD + 15, 'surgeon_wait'),
-    S(BUILD + 18, 'jfk_choose'),
-    S(BUILD + 24, 'snap_wait'),
-    S(BUILD + 27, 'jump_wait'),
-    S(BUILD + 30, 'firing_wait'),
-    S(BUILD + 33, 'mach_wait'),
-    S(BUILD + 36, 'hard'),                                # "not because they are easy"
-    S(BUILD + 40, 'jfk_choose'),                          # "but because they are hard"
-], DROP)
+    K(B, 'ASK'),                                                   # "Give me a go/no-go for launch."
+    S(C_BOOSTER, 'pad_wait'),                                      # "Booster!"  the F-1 bells, still        ... "Go!"
+    S(C_RETRO, 'sprint_wait_2', **{'in': 2.1}),                    # "Retro!"    she settles into the blocks ... "Go!"
+    S(C_FIDO, 'cat_wait_2'),                                       # "FIDO!"     a sailor's eyes on the deck ... "We're go, Flight."
+    S(C_GUIDANCE, 'swim_wait'),                                    # "Guidance!" bent on the block           ... "Guidance go!"
+    S(C_SURGEON, 'surgeon_wait'),                                  # "Surgeon!"  hands held up               ... "Go, Flight."
+    S(C_EECOM, 'alert_wait_2'),                                    # "EECOM!"    the helmet goes on          ... "We're go, Flight."
+    S(C_GNC, 'scramble_wait'),                                     # "GNC!"      the visor comes down        ... "We're go."
+    S(B + 27.0, 'firing_wait'),                                    # the launch director, 2026, looks up
+    J(W('CHOOSE', 26.91) - 0.25, 'CHOOSE'),                        # "We choose to go to the Moon"
+    S(W('CHOOSE', 29.13), 'mocr_wait', **{'in': 0.2}),             # "in this decade"
+    S(W('CHOOSE', 30.01), 'snap_wait'),                            # "and do the other things,"  (Notre Dame at the line)
+    S(W('CHOOSE', 30.63), 'indy_wait', **{'in': 1.0}),             #                             (the pace lap)
+    S(W('CHOOSE', 31.71) - 0.1, 'hard_2', **{'in': 0.5}),          # "not because they are easy,"  (it falls back onto the pad)
+    S(W('CHOOSE', 33.51) - 0.1, 'hard_3', **{'in': 1.2}),          # "but because they are hard,"
+], D)
 
-GO = layout([
-    S(DROP, 'derby_go', fx=dict(punch=0.14)),             # the gate bursts
-    S(DROP + 2, 'sprint_go'),
-    S(DROP + 4, 'cat_go'),
-    S(DROP + 6, 'drag_go'),
-    S(DROP + 8, 'pad_go', fx=dict(bloom=0.3)),
-    S(DROP + 11, 'snap_go'),
-    S(DROP + 13, 'jump_go'),
-    S(DROP + 15, 'mach_go'),
-    S(DROP + 17, 'swim_go'),
-    S(DROP + 19, 'rodeo_go'),
-    S(DROP + 21, 'indy_go'),
-    S(DROP + 23, 'alert_go'),
-    S(DROP + 25, 'surgeon_go'),
-    S(DROP + 26.5, 'staging'),
-    S(BREAK, 'walkout_2026'),                             # the a-cappella bar: they walk out
-], FINALE)
+# ---- 61-93: THE DROP. Everything goes at once.
+FIRST = ([S(D, 'derby_go', fx=dict(punch=0.16, bloom=0.3)),      # the gate bursts
+          S(D + 2, 'pad_go', fx=dict(bloom=0.3))]                # five engines light
+         if _find('derby_go')[1] else
+         [S(D, 'pad_go', fx=dict(punch=0.16, bloom=0.35), **{'in': 1.1}),   # five engines light (the starting gate goes here when it lands)
+          S(D + 2.5, 'scramble_go_2')])                          # the takeoff roll
+GO = layout(FIRST + [
+    S(D + 4, 'sprint_go'),                                         # out of the blocks
+    S(D + 5.5, 'cat_wait', **{'in': 0.5}),                         # the shooters touch the deck
+    S(D + 6.5, 'cat_go'),                                          # and the jet is gone
+    S(D + 7.5, 'scramble_go'),                                     # the burner lights
+    S(D + 9, 'mach_go'),                                           # ignition; the smoke ring
+    S(D + 11, 'alert_go'),                                         # across the bay to the engine
+    S(D + 12.5, 'alert_go_2'),                                     # rolling, every light on
+    S(D + 14, 'surgeon_go'),                                       # the instrument hits the palm
+    S(D + 15.5, 'indy_go'),                                        # thirty-three cars to the green
+    S(D + 17, 'launch_go_3', **{'in': 1.3}),                       # Artemis II climbs past the camera
+    S(D + 19.5, 'walkout_2026', **{'in': 1.3}),                    # the crew, striding out
+    S(D + 22, 'mocr_go_2'),                                        # binoculars up at the windows
+    S(D + 23.5, 'snap_go', alt=[('sprint_go', 1.7)]),              # Notre Dame: the snap, the line fires out
+    S(D + 25, 'cat_go', **{'in': 0.7}),                            # the deck crew watch it go off the bow
+    S(D + 26.5, 'drag_go', **{'in': 3.0}),
+    S(BREAK, 'walkout_1969', **{'in': 1.6}),                       # the a-cappella bar: July 1969, a wave
+], F)
 
+# ---- 93-125: the last eight bars. Bigger; then wait/go pairs at half a beat; then Kennedy and the landing.
 FIN = layout([
-    S(FINALE, 'launch_go', fx=dict(bloom=0.35, punch=0.14)),
-    S(FINALE + 4, 'mocr_go'),
-    S(FINALE + 8, 'scramble_go'),
-    S(FINALE + 12, 'weld_go'),
-    S(FINALE + 16, 'jfk_choose'),                         # "...one we intend to win"
-    S(FINALE + 32, 'launch_go_2'),
-    S(FINALE + 40, 'eagle_descent'),
-], LAST)
+    S(F, 'launch_go_2', fx=dict(bloom=0.35, punch=0.14)),          # Artemis II, the boosters light
+    S(F + 3, 'firing_go', **{'in': 0.3}),                          # the launch director throws her arms wide
+    S(F + 5.5, 'staging'),                                         # the ring falls away to the Earth
+    S(F + 8.5, 'scramble_go_2'),                                   # the takeoff roll
+    S(F + 10, 'mach_go', **{'in': 1.9}),                           # climbing out of frame
+    S(F + 12, 'surgeon_go_2'),                                     # the team at the table
+    S(F + 14, 'alert_go', **{'in': 1.6}),                          # aboard
+], F + 16)
 
+
+def pairs(*rows):
+    """Wait, go, wait, go: half a beat each."""
+    out = []
+    for k in rows:
+        k = (k,) if isinstance(k, str) else k
+        it = C(k[0], 0.5, **({'in': k[1]} if len(k) > 1 else {}))
+        it['fx'] = dict(it.get('fx', {}), punch=0.08, chroma=8)
+        out.append(it)
+    return out
+
+
+STROBE = pairs(('sprint_wait', 1.0), ('sprint_go', 0.3), ('cat_wait_2', 0.5), ('cat_go', 0.1),
+               ('surgeon_wait_2', 1.0), ('surgeon_go', 0.5), ('alert_wait', 0.5), ('alert_go_2', 0.8),
+               ('scramble_wait', 1.2), ('scramble_go', 0.3), ('mach_wait', 0.3), ('mach_go', 0.1),
+               ('firing_wait_2', 1.0), ('firing_go', 0.6), ('pad_wait', 3.3), ('pad_go', 1.5))
+
+CLOSE = layout([
+    S(F + 24, 'launch_go', speed=1.0),                             # "one we are unwilling to postpone,"
+    S(W('WIN', 49.65) - 0.4, 'eagle_descent', fx=dict(bloom=0.25), **{'in': 2.0}),   # "and one we intend to"  (the shadow meets the Moon)
+    S(W('WIN', 51.21) - 0.15, 'mocr_go', fx=dict(punch=0.12)),     # "win,"  the room erupts, July 1969
+], END_AT)
+
+# ---- silence. He asks again. A rocket on the pad; the first glow under it as we stop.
 END_TEXT = os.environ.get('GO_TEXT', 'Are you go?')
-END = [
-    C('mocr_wait_2', END_AT - LAST),
-    C('poll_film', 10.0, text=[(5.0, END_TEXT, 50, 0.84, 'serif')]),
-]
+END = layout([
+    K(END_AT, 'ASK2'),
+    S(END_AT + 5.5, 'pad_wait', speed=0.6, dim=0.22, fx=dict(punch=0.0, shake=0), text=[(3.0, END_TEXT, 68, 0.5, 'serif')], **{'in': 1.2}),
+], END_AT + 13.5)
 
-SEQ = OPEN + WAIT + GO + FIN + END
+SEQ = OPEN + INTRO + WAIT + GO + FIN + STROBE + CLOSE + END
 
 if __name__ == '__main__':
     import sys
     if 'bed' in sys.argv:
         print('bed: %.2f s' % make_bed())
     b = 0.0
-    marks = {id(OPEN[0]): 'OPEN', id(WAIT[0]): 'BUILD', id(GO[0]): 'DROP', id(FIN[0]): 'FINALE', id(END[0]): 'END'}
+    marks = {id(OPEN[0]): 'OPEN', id(INTRO[0]): 'INTRO', id(WAIT[0]): 'BUILD', id(GO[0]): 'DROP', id(FIN[0]): 'FINALE',
+             id(STROBE[0]): 'STROBE', id(CLOSE[0]): 'CLOSE', id(END[0]): 'END'}
     for s in SEQ:
         if id(s) in marks:
             print('%6.1f  %s' % (b, marks[id(s)]))

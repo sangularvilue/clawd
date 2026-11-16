@@ -55,14 +55,18 @@ SEGMENTS = [
     (8, 16, False, -1.5),        #  16  its second half again
     (16, 44, False, -1.0),       #  24  the drums come in, lightly
     (44, 76, True, 0.0),         #  52  THE DROP: the full band slams in; the riff
-    (252, 288, True, 0.0),       #  84  the last bar of a riff and the last chorus
-    (288, 300, 'first', 0.0),    # 120  the breakdown: the drums fall away (the chorus's last shout kept, then no vocals)
-    (292, 300, False, 0.0),      # 132  its last two bars again, so Reagan has room
-    (300, None, True, 0.0),      # 140  the final riff, the held last hit, the dead stop
+    (288, 300, False, 0.0),      #  84  the record's breakdown: the drums fall away
+    (292, 300, False, 0.0),      #  96  its last two bars again, so Reagan has room
+    (256, 288, True, 0.0),       # 104  the last chorus, gang vocals (it comes after the breakdown here)
+    (300, None, True, 0.0),      # 136  the final riff, the held last hit, the dead stop
 ]
+# The shouts that belong across the joins: the chorus's pickup over the breakdown's last beat, and the chorus's last
+# syllable over the final riff's first beat. (record beats from, to; the edit beat they land on)
+OVERLAYS = [(255, 256, 103), (288, 289, 136)]
 DROP = D = 52
-BREAKDOWN = K = 120
-FINAL = F = 140
+BREAKDOWN = K = 84
+CHORUS = H = 104
+FINAL = F = 136
 
 
 def _beats():
@@ -127,6 +131,19 @@ def make_bed(xfade=0.012):
             y = np.concatenate([y, s2])
             y[k - nx:k] *= np.cos(np.linspace(0, np.pi / 2, nx))[:, None]
             y[k:k + nx] *= np.sin(np.linspace(0, np.pi / 2, nx))[:, None]
+    for a, z, at in OVERLAYS:                # vocals only, stretched to whole beats, eased in and out
+        i0, i1 = int(round(bt[a] * sr)), int(round(bt[z] * sr))
+        p_in, p_out = os.path.join(tmpd, 'ov.wav'), os.path.join(tmpd, 'ov2.wav')
+        sf.write(p_in, voc[i0:i1], sr, subtype='FLOAT')
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', p_in, '-af', 'rubberband=tempo=%.6f' % ((bt[z] - bt[a]) / ((z - a) * BEAT)),
+                        '-c:a', 'pcm_f32le', p_out], check=True)
+        o = sf.read(p_out, dtype='float32')[0]
+        k = int(round((at * BEAT + PRE) * sr))
+        m = min(len(o), len(y) - k)
+        r = int(0.01 * sr)
+        o[:r] *= np.linspace(0, 1, r)[:, None]
+        o[m - r:m] *= np.linspace(1, 0, r)[:, None]
+        y[k:k + m] += o[:m]
     for f in os.listdir(tmpd):
         os.remove(os.path.join(tmpd, f))
     os.rmdir(tmpd)
@@ -218,8 +235,9 @@ def layout(rows, end):
 # (file, first word starts, last word ends), seconds into the file, from the word-level transcripts in the logs.
 GIPP = 'sd_gipp_voice'           # Reagan as Gipp, 1940 film; his voice separated from the film's score (make_voices())
 GIPP_PIC = 'w1109_gipper'        # the same take with its picture (lips in sync with the original timing)
-ROCKNE_TODAY = 'w1109_rockne_real_today'
-ROCKNE_FIGHT = 'w1109_rockne_real_fight'
+ROCKNE_TODAY = 'sd_rockne_today'     # the real Rockne's 78 (w1109_rockne_real_today), cleaned up by make_voices()
+ROCKNE_FIGHT = 'sd_rockne_fight'     # (w1109_rockne_real_fight), the same
+REAGAN88 = 'w1109_gipper_reagan'    # Reagan, New Orleans, 15 Aug 1988 (CNN replay): "Go out there and win one for the Gipper."
 REAGAN = 'w1109_reagan81_causes'
 PH = dict(
     ROCK=(GIPP, 0.00, 0.66),           # "Rock..."
@@ -228,19 +246,20 @@ PH = dict(
     WIN=(GIPP, 11.66, 13.24),          # "win just one for the Gipper."
     TODAY=(ROCKNE_TODAY, 0.00, 2.72),  # "And don't forget, men: today's the day we're gonna win!"
     FIGHT=(ROCKNE_FIGHT, 1.30, 2.64),  # "Fight! Fight! Fight! Fight! Fight!"
-    CAUSES=(REAGAN, 0.15, 7.80),       # "There will come times in the lives of all of us when we'll be faced with causes
+    CAUSES=(REAGAN, 0.15, 7.80),
+    GOWIN=(REAGAN88, 0.00, 3.02),      # "Go out there... and win one for the Gipper." (his own long pause in the middle)       # "There will come times in the lives of all of us when we'll be faced with causes
                                        #  bigger than ourselves, and they won't be on a playing field."
 )
 VOICEOVER = []
 SAID = {}
 
 
-def say(ph, at, gain=1.25, duck=0.4, lead=0.08, tail=0.25):
+def say(ph, at, gain=1.25, duck=0.4, lead=0.08, tail=0.25, fade=0.08):
     """Phrase ph so that its first word lands on beat `at`."""
     f, w0, w1 = PH[ph]
     SAID[ph] = (f, w0, at)
     VOICEOVER.append(dict(file=media(f), at=at - lead / BEAT, src_in=max(0.0, w0 - lead), dur=w1 - w0 + lead + tail,
-                          gain=gain, duck=duck))
+                          gain=gain, duck=duck, fade=fade))
 
 
 def ends(ph, beat):
@@ -262,13 +281,15 @@ def lips(ph, beat):
 
 
 SLAPS = []
+SLAP_HIT = 0.802                 # onset of the second hit in media/sd_slap_sfx.m4a
 
 
 def slap(beat, gain=0.9, duck=1.0):
     """The sound of a hand on the sign, on a beat."""
-    f = 'media/sd_slap.m4a' if have('sd_slap') else 'media/sd_slap_synth.wav'
+    real = os.path.exists(os.path.join(HERE, 'media', 'sd_slap_sfx.m4a'))   # a CC0 library slap (Red Library), its 2nd hit
+    f, t0 = ('media/sd_slap_sfx.m4a', SLAP_HIT) if real else ('media/sd_slap_synth.wav', 0.0)
     if os.path.exists(os.path.join(HERE, f)):
-        VOICEOVER.append(dict(file=f, at=beat - 0.004 / BEAT, src_in=0.0, dur=0.5, gain=gain, duck=duck, fade=0.3))
+        VOICEOVER.append(dict(file=f, at=beat - 0.012 / BEAT, src_in=max(0.0, t0 - 0.012), dur=0.42, gain=gain, duck=duck, fade=0.25))
     SLAPS.append(beat)
 
 
@@ -279,21 +300,25 @@ say('ASK', 19.5, gain=1.3, duck=0.5)                         # "ask them to go i
 say('WIN', 25.0, gain=1.3, duck=0.5)                         # "win just one for the Gipper."
 slap(32.0)                                                   # the first hand on the sign
 # 1928: Rockne himself, eight years later
-say('TODAY', 40.0, gain=1.35, duck=0.45)                     # "And don't forget, men: today's the day we're gonna win!"
-say('FIGHT', ends('FIGHT', D - 0.35), gain=1.4, duck=0.45, lead=0.04, tail=0.12)   # "Fight! Fight! Fight! Fight! Fight!" -> the drop
+say('TODAY', 40.0, gain=1.5, duck=0.3)                     # "And don't forget, men: today's the day we're gonna win!"
+say('FIGHT', ends('FIGHT', D - 0.35), gain=1.5, duck=0.32, lead=0.04, tail=0.12)   # "Fight! Fight! Fight! Fight! Fight!" -> the drop
 slap(D, gain=1.0)                                            # THE DROP: the hand lands on the downbeat
-for b in (D + 8, D + 16, D + 24, 84, 92, 100, 108):           # the motif on the bar lines while Notre Dame runs out
+for b in (D + 8, D + 16, D + 24):                            # the motif on the bar lines while Notre Dame runs out
     slap(b, gain=0.55)
-# 1981: the Gipper himself, in the record's breakdown; "playing field" ends on the final riff's downbeat
-say('CAUSES', ends('CAUSES', F - 0.25), gain=1.35, duck=0.5, tail=0.3)
-slap(F, gain=1.0)
+# 1981: the Gipper himself, in the record's breakdown; "playing field" ends on the chorus's downbeat
+say('CAUSES', ends('CAUSES', H - 0.25), gain=1.35, duck=0.5, tail=0.3)
+slap(H, gain=1.0)
+for b in (H + 8, H + 16, H + 24, F):
+    slap(b, gain=0.6)
 END_HIT = seg_starts()[-1]
 try:
     _bt = _beats()
     END_HIT = round(seg_starts()[-1] + (150.70 - _bt[300]) / ((_bt[-1] - _bt[300]) / (len(_bt) - 1 - 300)), 2)
 except Exception:
     END_HIT = F + 24.7
+assert seg_starts()[3] == D and seg_starts()[4] == K and seg_starts()[6] == H and seg_starts()[7] == F
 END_AT = round(END_HIT + 3.6, 2)     # the held hit, the dead stop, a breath of silence
+say('GOWIN', END_AT + 1.5, gain=1.25, duck=1.0, lead=0.04, tail=0.45, fade=0.5)   # in the silence, 48 years after he played Gipp: to the viewer
 
 # ---------------------------------------------------------------- picture
 OLD = dict(sat=0.0)
@@ -312,7 +337,7 @@ OPEN = layout([
     S(0.0, 'w1109_sign_static', alt=['w1109_sign_reach'], zoom=(1.0, 1.06)),   # the sign in the dark: PLAY LIKE A CHAMPION TODAY
     G(1.3, 'ROCK'),                                                             # "Rock..."
     S(3.4, 'w1109_gipp_photo', fit='contain', zoom=(1.0, 1.08)),                # the real George Gipp, 1920
-    G(W('SOMEDAY', 2.44) - 0.15, 'SOMEDAY'),                                    # "someday"
+    S(W('SOMEDAY', 2.44) - 0.15, 'w1109_gipp_photo_2', fit='contain', zoom=(1.0, 1.1)),   # "someday"  (Gipp in uniform)
     S(W('SOMEDAY', 3.06), 'w1109_nd_1920s_2'),                                  # "when the team's up against it"
     S(W('SOMEDAY', 5.92), 'w1109_mud_game_2', **{'in': 0.8}),                   # "the breaks are beating the boys"
     S(W('SOMEDAY', 7.18) + 1.0, 'td1920s', alt=[('w1109_nd_1920s', 1.0)]),       # (the mandolin, alone)
@@ -334,98 +359,110 @@ MID = layout([
     S(W('FIGHT', 1.30) - 0.1, 'td1920s', alt=[('w1109_nd_1920s', 0.2)], **{'in': 0.6}),  # "Fight!"
     S(W('FIGHT', 1.60) - 0.1, 'w1109_nd_1920s_3', **{'in': 0.4}),               # "Fight!"
     S(W('FIGHT', 1.88) - 0.1, 'army1928_2', alt=[('w1109_nd_1920s_2', 2.4)], **{'in': 1.2}),   # "Fight!"
-    S(W('FIGHT', 2.12) - 0.1, 'w1109_mud_game', **{'in': 0.6}),                 # "Fight!"
-    S(W('FIGHT', 2.40) - 0.1, 'w1109_sign_reach',                               # "Fight!" and the hand comes up to the sign...
-      **{'in': round(REACH_CONTACT - (D - W('FIGHT', 2.40) + 0.1) * BEAT, 3)}),
+    S(D - 0.8 / BEAT, 'slap', **{'in': 0.6}),                                   # "Fight! Fight!" down the stairwell, the sign swings into view...
 ], D)
+SLAP_LANDS = 1.40                     # sd_slap: the white glove lands on TODAY 1.40 s in
 
-# ---- 52-84: THE DROP. ...and lands. Color. The team pours out of the tunnel.
+# ---- 52-84: THE DROP. ...the glove lands on TODAY on the downbeat. Color. A century of the team running out.
 DROPS = layout([
-    S(D, 'slap', alt=[('w1109_sign_reach', REACH_CONTACT)], fx=dict(punch=0.16, bloom=0.3, sat=1.05)),
-    S(D + 1.5, 'tunnel', alt=[('w1109_tunnel_run_2', 1.3)], fx=dict(punch=0.1)),
-    S(D + 4, 'tunnel_2', alt=[('w1109_tunnel_run', 0.6)]),
-    S(D + 6, 'charge'),
-    S(D + 8, 'slap_2', alt=[('w1109_sign_slap_3', 0.0)]),
-    S(D + 9, 'students'),
-    S(D + 11, 'band'),
-    S(D + 13, 'stairs'),
-    S(D + 16, 'slap_3', alt=[('w1109_sign_slap_2', 0.3)]),
-    S(D + 17, 'tunnel', alt=[('w1109_tunnel_run_2', 2.0)], **{'in': 1.6}),
-    S(D + 19, 'dome'),
-    S(D + 21, 'charge', **{'in': 1.5}),
-    S(D + 24, 'slap_4', alt=[('w1109_sign_slap', 0.85)]),
-    S(D + 25, 'win'),
-    S(D + 28, 'students', **{'in': 1.5}),
-    S(D + 30, 'army1928', alt=[('w1109_nd_1920s', 1.4)], **{'in': 1.0}),        # then
-], 84)
-
-# ---- 84-120: the last chorus, gang vocals; no one speaks. Then and now, a slap on every bar.
-CHORUS = layout([
-    S(84, 'slap', alt=[('w1109_sign_slap', 0.85)], **{'in': 0.0}),
-    S(85, 'tunnel_2', alt=[('w1109_tunnel_run', 0.0)], **{'in': 1.0}),
-    S(88, 'band', **{'in': 1.5}),
-    S(90, 'w1109_nd_1920s_2', **{'in': 0.5}),
-    S(92, 'slap_2', alt=[('w1109_sign_slap_3', 0.0)], **{'in': 0.2}),
-    S(93, 'win', **{'in': 1.5}),
-    S(96, 'w1109_four_horsemen'),
-    S(97, 'charge', **{'in': 2.5}),
-    S(100, 'slap_3', alt=[('w1109_sign_slap_2', 0.3)], **{'in': 0.2}),
-    S(101, 'students', **{'in': 2.5}),
-    S(104, 'stairs', **{'in': 1.5}),
-    S(106, 'w1109_rockne_real_2', **{'in': 2.0}),
-    S(108, 'slap_4', alt=[('w1109_sign_slap', 0.85)], **{'in': 0.2}),
-    S(109, 'tunnel', alt=[('w1109_tunnel_run_2', 2.6)], **{'in': 2.4}),
-    S(112, 'dome', **{'in': 1.5}),
-    S(114, 'win', **{'in': 2.8}),
-    S(117, 'w1109_gipp_photo_2', fit='contain'),
+    S(D, 'slap', fx=dict(punch=0.18, bloom=0.3), **{'in': SLAP_LANDS}),          # the hand lands
+    S(D + 0.3 / BEAT, 'w1109_tunnel_run', fx=dict(punch=0.1), **{'in': 0.55}),   # 2026: the coach slaps the box and the team pours out after him
+    S(57.0, 'w1109_tunnel_run_2', **{'in': 1.3}),                               # 1993: the flag and the team burst past
+    S(D + 8, 'w1109_sign_slap', **{'in': 0.85}),                                # a hand on the sign
+    S(61.0, 'students'),                                                        # 2025: the student section
+    S(63.0, 'army1928', **{'in': 0.5}),                                         # 1928
+    S(64.0, 'win', **{'in': 1.2}),                                              # 2025: the final whistle against USC
+    S(66.0, 'w1109_nd_huddle', **{'in': 0.3}),                                  # 1993: hands up in the huddle
+    S(D + 16, 'w1109_sign_slap_3'),                                             # a hand on the sign
+    S(69.0, 'td1920s'),                                                         # 1920s: through the line
+    S(71.0, 'students', **{'in': 2.0}),                                         # the section on its feet under the lights
+    S(72.0, 'w1109_tunnel_run', **{'in': 1.6}),
+    S(74.0, 'rockne_team_2', **{'in': 0.5}),                                    # Rockne over the bench
+    S(75.0, 'win', **{'in': 2.6}),
+    S(D + 24, 'w1109_sign_slap_2', **{'in': 0.3}),                              # a fist on the sign
+    S(77.3, 'w1109_tunnel_run_2', **{'in': 2.0}),
+    S(79.0, 'army1928_3'),                                                      # the goal line, 1928
+    S(80.5, 'win', **{'in': 0.3}),
+    S(82.0, 'gipp_action_2'),                                                   # (the band thins out)
 ], K)
 
-# ---- 120-140: the breakdown. Reagan, 1981: the causes that won't be on a playing field. Faces before they go in.
+# ---- 84-104: the breakdown. Reagan, 1981: the causes that won't be on a playing field. Faces before they go in.
 BREAK = layout([
-    S(K, 'reagan1981', alt=[('w1109_r81_grads', 0.0)]),                          # the arena, 17 May 1981
+    S(K, 'reagan1981', alt=[('w1109_r81_grads', 0.0)]),                          # Notre Dame, 17 May 1981
     R(W('CAUSES', 0.15) - 0.2),                                                 # "There will come times in the lives of all of us"
-    S(W('CAUSES', 2.38) + 0.3, 'storm_linemen', speed=0.7),                     # "when we'll be faced with"
-    S(W('CAUSES', 4.12) - 0.1, 'mud_training', speed=0.7),                      # "causes bigger than ourselves,"
-    S(W('CAUSES', 5.48) + 0.2, 'fire_in', speed=0.6),                           # (a breath)
+    S(W('CAUSES', 2.38) + 0.3, 'fire_in_2', speed=0.6),                         # "when we'll be faced with"  (a masked face, a flashlight)
+    S(W('CAUSES', 4.12) - 0.1, 'wildfire', speed=0.75, **{'in': 0.2}),           # "causes bigger than ourselves,"  (into the smoke)
+    S(W('CAUSES', 5.48) + 0.2, 'surf_rescue', speed=0.6, **{'in': 3.0}),         # (a breath: the sea comes over the sailors at the rail)
     R(W('CAUSES', 6.0) - 0.15),                                                 # "and they won't be on a playing field."
+], H)
+
+# ---- 104-136: the last chorus, gang vocals; nobody speaks. Americans going in where it isn't a game, and the team.
+CHORUS_SHOTS = layout([
+    S(H, 'fire_in', fx=dict(punch=0.16, bloom=0.25), **{'in': 0.4}),            # through the door into the fire
+    S(H + 2, 'surf_rescue'),                                                    # the boat crew through the whitecaps
+    S(H + 4, 'wildfire_2'),                                                     # the line pack, the drip torch
+    S(H + 6, 'mach_new'),                                                       # Mach: the airframe out of the truck
+    S(H + 8, 'slap', **{'in': 1.2}),                                            # the sign
+    S(H + 9, 'er_team', **{'in': 0.2}),                                         # the stretcher at a run
+    S(H + 11, 'fire_in_3'),                                                     # down on the hose line, into the smoke
+    S(H + 13, 'mach_new_2'),                                                    # Mach: hands on the airframe
+    S(H + 14, 'w1109_tunnel_run', **{'in': 2.0}),                               # the team
+    S(H + 16, 'w1109_sign_slap', **{'in': 0.85}),
+    S(H + 17, 'fire_in_2', **{'in': 0.8}),                                      # the stream into the wall of flame
+    S(H + 19, 'mach_new', **{'in': 2.55}),                                      # the launcher case thrown open
+    S(H + 20, 'wildfire', **{'in': 3.6}),                                       # the crew on the burned slope
+    S(H + 22, 'students', **{'in': 1.0}),
+    S(H + 24, 'w1109_sign_slap_3', **{'in': 0.1}),
+    S(H + 25, 'fire_in', **{'in': 2.5}),                                        # two more push the line to the door
+    S(H + 27, 'surf_rescue', **{'in': 3.1}),                                    # the sea over the rail
+    S(H + 28, 'mach_new_2', **{'in': 1.8}),                                     # the factory floor
+    S(H + 29, 'er_team', **{'in': 1.6}),
+    S(H + 30, 'win', **{'in': 2.0}),
 ], F)
 
-# ---- 140-165: the final riff. Americans going in where it isn't a game. The held last hit.
+# ---- 136-161: the final riff; then and now, half a beat apart; the held last hit.
 FIN = layout([
-    S(F, 'fire_in', fx=dict(punch=0.14, bloom=0.25)),
-    S(F + 2, 'surf_rescue'),
-    S(F + 4, 'slap', alt=[('w1109_sign_slap', 0.85)], **{'in': 0.0}),
-    S(F + 5, 'wildfire'),
-    S(F + 7, 'mud_training_2'),
-    S(F + 8, 'storm_linemen', **{'in': 1.5}),
-    S(F + 10, 'mach_new'),
-    S(F + 12, 'flood_rescue'),
-    S(F + 13, 'er_team'),
-    S(F + 14, 'tunnel_2', alt=[('w1109_tunnel_run', 0.8)], **{'in': 0.5}),
-    S(F + 16, 'night_builders'),
-    S(F + 17, 'fire_in_2'),
-    S(F + 18, 'wildfire_2'),
-    S(F + 19, 'mach_new_2'),
-    S(F + 20, 'charge', **{'in': 0.5}),
-    S(F + 21, 'slap_2', alt=[('w1109_sign_slap_3', 0.0)], **{'in': 0.2}),
-    S(F + 21.5, 'surf_rescue', **{'in': 1.5}),
-    S(F + 22, 'slap_3', alt=[('w1109_sign_slap_2', 0.3)], **{'in': 0.2}),
-    S(F + 22.5, 'fire_in', **{'in': 2.0}),
-    S(F + 23, 'slap_4', alt=[('w1109_sign_slap', 0.85)], **{'in': 0.2}),
-    S(F + 23.5, 'mud_training', **{'in': 2.5}),
-    S(F + 24, 'tunnel', alt=[('w1109_tunnel_run_2', 1.3)], **{'in': 0.3}),
-    S(END_HIT, 'charge', fx=dict(punch=0.16, bloom=0.3), **{'in': 1.0}),        # the held last hit
+    S(F, 'w1109_tunnel_run_2', fx=dict(punch=0.14, bloom=0.25), **{'in': 1.35}),
+    S(F + 2, 'fire_in_3', **{'in': 1.0}),
+    S(F + 3, 'army1928', **{'in': 1.5}),
+    S(F + 4, 'wildfire_2', **{'in': 1.6}),
+    S(F + 5, 'w1109_nd_huddle', **{'in': 1.2}),
+    S(F + 6, 'mach_new', **{'in': 0.3}),
+    S(F + 7, 'td1920s', **{'in': 1.2}),
+    S(F + 8, 'w1109_sign_reach', **{'in': 2.85}),                               # a hand on the sign
+    S(F + 9, 'er_team', **{'in': 2.6}),
+    S(F + 10, 'students', **{'in': 0.5}),
+    S(F + 11, 'fire_in_2', **{'in': 1.6}),
+    S(F + 12, 'rockne_team', **{'in': 1.0}),                                    # Rockne
+    S(F + 13, 'surf_rescue', **{'in': 0.8}),
+    S(F + 14, 'win', **{'in': 3.0}),
+    S(F + 15, 'w1109_tunnel_run', **{'in': 2.2}),
+    S(F + 16, 'army1928_2', **{'in': 2.0}),
+    S(F + 16.5, 'fire_in', **{'in': 1.2}),
+    S(F + 17, 'w1109_nd_1920s_3', **{'in': 0.6}),
+    S(F + 17.5, 'mach_new_2', **{'in': 2.6}),
+    S(F + 18, 'td1920s', **{'in': 0.2}),
+    S(F + 18.5, 'wildfire', **{'in': 0.5}),
+    S(F + 19, 'gipp_action', **{'in': 0.5}),
+    S(F + 19.5, 'er_team', **{'in': 1.2}),
+    S(F + 20, 'w1109_sign_slap_2', **{'in': 0.35}),
+    S(F + 20.5, 'students', **{'in': 2.8}),
+    S(F + 21, 'w1109_sign_slap', **{'in': 0.9}),
+    S(F + 21.5, 'fire_in_3', **{'in': 2.6}),
+    S(F + 22, 'slap', **{'in': 1.3}),
+    S(F + 22.5, 'w1109_tunnel_run_2', **{'in': 1.6}),
+    S(END_HIT, 'win', fx=dict(punch=0.16, bloom=0.3), **{'in': 1.6}),           # the held last hit: the team, the confetti
 ], END_AT)
 
 # ---- silence. A hand comes up to the sign; we stop before it lands.
 END_TEXT = os.environ.get('SD_TEXT', 'Someday is today.')
 END = [
-    C('reach_hold', 14.0, alt=[('w1109_sign_reach', 0.6)], fx=dict(punch=0.0, shake=0, chroma=0, sat=1.0),
-      text=[(7.0, END_TEXT, 54, 0.5, 'serif')]),
+    C('reach_hold', 16.0, alt=[('w1109_sign_reach', 0.6)], fx=dict(punch=0.0, shake=0, chroma=0, sat=1.0),
+      text=[(10.0, END_TEXT, 54, 0.5, 'serif')]),
 ]
 
 
-def make_reach(src='w1109_sign_reach', t0=1.7, t1=2.78, slow=4.0, hold=4.0):
+def make_reach(src='w1109_sign_reach', t0=1.7, t1=2.36, slow=5.0, hold=6.0):
     """The last shot: the hand comes up toward the sign at a quarter speed and stops a frame before it lands."""
     path = os.path.join(HERE, 'media', src + '.mp4')
     if not os.path.exists(path):
@@ -435,7 +472,7 @@ def make_reach(src='w1109_sign_reach', t0=1.7, t1=2.78, slow=4.0, hold=4.0):
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', path, '-vf', vf, '-an', '-c:v', 'libx264', '-crf', '14',
                     '-pix_fmt', 'yuv420p', os.path.join(HERE, 'media', 'sd_reach_hold.mp4')], check=True)
 
-OLD_REFS = {'w1109_gipp_photo', 'w1109_gipp_photo_2', 'w1109_four_horsemen', 'w1109_nd_1920s', 'w1109_nd_1920s_2',
+OLD_REFS = {'w1109_nd_huddle', 'w1109_gipp_photo', 'w1109_gipp_photo_2', 'w1109_four_horsemen', 'w1109_nd_1920s', 'w1109_nd_1920s_2',
             'w1109_nd_1920s_3', 'w1109_rockne_real', 'w1109_rockne_real_2', 'w1109_mud_game', 'w1109_mud_game_2',
             'sd_army1928', 'sd_army1928_2', 'sd_td1920s', 'sd_gipp_action', 'sd_rockne_team', 'sd_rockne_team_2'}
 
@@ -449,8 +486,8 @@ def era(items):
         it['fx'] = dict(it.get('fx', {}), sat=0.0 if key in OLD_REFS else it.get('fx', {}).get('sat', COLOR['sat']))
 
 
-era(DROPS + CHORUS + BREAK + FIN + END)
-SEQ = OPEN + MID + DROPS + CHORUS + BREAK + FIN + END
+era(DROPS + BREAK + CHORUS_SHOTS + FIN + END)
+SEQ = OPEN + MID + DROPS + BREAK + CHORUS_SHOTS + FIN + END
 
 
 def make_voices():
@@ -458,18 +495,25 @@ def make_voices():
     src = os.path.join(HERE, 'media', 'raw', 'sd_gipp', 'stems', 'htdemucs', 'gipper', 'vocals.wav')
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src, '-af', 'highpass=f=110,lowpass=f=9000,volume=2.0,alimiter=limit=0.89',
                     '-c:a', 'aac', '-b:a', '192k', os.path.join(HERE, 'media', 'sd_gipp_voice.m4a')], check=True)
+    for a, b in (('w1109_rockne_real_today', 'sd_rockne_today'), ('w1109_rockne_real_fight', 'sd_rockne_fight')):
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(HERE, 'media', a + '.m4a'), '-af',
+                        'highpass=f=190,equalizer=f=2600:t=q:w=1.1:g=5,equalizer=f=500:t=q:w=1.0:g=-3,lowpass=f=7000,'
+                        'acompressor=threshold=-20dB:ratio=3:attack=4:release=90:makeup=2,alimiter=limit=0.89',
+                        '-c:a', 'aac', '-b:a', '192k', os.path.join(HERE, 'media', b + '.m4a')], check=True)
 
 
 if __name__ == '__main__':
     import sys
+    if 'voices' in sys.argv:
+        make_voices()
     if 'bed' in sys.argv:
         print('bed: %.2f s' % make_bed())
         make_slap()
         make_voices()
         make_reach()
     b = 0.0
-    marks = {id(OPEN[0]): '1920', id(MID[0]): '1928', id(DROPS[0]): 'DROP', id(CHORUS[0]): 'CHORUS',
-             id(BREAK[0]): 'BREAKDOWN 1981', id(FIN[0]): 'FINAL', id(END[0]): 'END'}
+    marks = {id(OPEN[0]): '1920', id(MID[0]): '1928', id(DROPS[0]): 'DROP', id(BREAK[0]): 'BREAKDOWN 1981',
+             id(CHORUS_SHOTS[0]): 'CHORUS', id(FIN[0]): 'FINAL', id(END[0]): 'END'}
     for s in SEQ:
         if id(s) in marks:
             print('%6.1f  %s' % (b, marks[id(s)]))

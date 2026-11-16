@@ -456,13 +456,15 @@ FIN = layout([
 
 # ---- silence. A hand comes up to the sign; we stop before it lands.
 END_TEXT = os.environ.get('SD_TEXT', 'Someday is today.')
+REACH_CROP = (0.06, 0.0, 0.94, 0.88)   # drops the CBS eye in the corner
 END = [
-    C('reach_hold', 16.0, alt=[('w1109_sign_reach', 0.6)], fx=dict(punch=0.0, shake=0, chroma=0, sat=1.0),
-      text=[(10.0, END_TEXT, 54, 0.5, 'serif')]),
+    C('reach_hold', 10.0, alt=[('w1109_sign_reach', 0.6)], crop=REACH_CROP, fx=dict(punch=0.0, shake=0, chroma=0, sat=1.0)),
+    C('reach_hold', 7.0, alt=[('w1109_sign_reach', 2.6)], crop=REACH_CROP, dim=0.72, fx=dict(punch=0.0, shake=0, chroma=0, sat=0.6),
+      text=[(0.8, END_TEXT, 58, 0.5, 'serif')], **{'in': round(10.0 * BEAT, 3)}),   # the hand frozen, faint; the line
 ]
 
 
-def make_reach(src='w1109_sign_reach', t0=1.7, t1=2.36, slow=5.0, hold=6.0):
+def make_reach(src='w1109_sign_reach', t0=1.85, t1=2.56, slow=5.0, hold=6.0):
     """The last shot: the hand comes up toward the sign at a quarter speed and stops a frame before it lands."""
     path = os.path.join(HERE, 'media', src + '.mp4')
     if not os.path.exists(path):

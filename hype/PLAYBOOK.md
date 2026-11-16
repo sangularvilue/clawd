@@ -141,6 +141,11 @@ Step by step:
 - End text is one quiet line. No motion-graphics clutter.
 - 720p24 is acceptable for long edits when 1080p60 would be too heavy to send.
 - Lips in sync or do not show the speaker.
+- 16 Nov pitch (sent late: Saturday's task only reached the session on Monday with Monday's). He picked
+  "Someday Is Today" (the Gipper, done properly, to Dropkick Murphys' "I'm Shipping Up to Boston") and said
+  of the other two, "Be Not Afraid" (John Paul II in Denver, 1993; Sabaton's "The Last Stand"; doors opening)
+  and "Duty. Honor. Country." (MacArthur at West Point, 1962; Queen's "We Will Rock You"): "The others are good
+  too." Both stay open for future pitches.
 - On "GO." (10 Nov; Kennedy at Rice, the go/no-go poll, "Stronger"): pitched as one of three concepts before
   anything was sourced, and he picked it. First cut: "definitely better". After the opening was rebuilt:
   "fantastic". What he said and what it taught:

@@ -141,6 +141,11 @@ Step by step:
 - End text is one quiet line. No motion-graphics clutter.
 - 720p24 is acceptable for long edits when 1080p60 would be too heavy to send.
 - Lips in sync or do not show the speaker.
+- 23 Nov pitch (sent late again: Saturday's task reached the session only on Monday, with Monday's). He picked
+  "Be Not Afraid" (John Paul II to young Americans in Denver, 1993; doors closed before the drop and thrown open
+  on it; Sabaton's "The Last Stand"). Not chosen, still open: "Duty. Honor. Country." (MacArthur at West Point,
+  1962; Queen's "We Will Rock You"; the stomp-clap) and "Arsenal" (FDR's 1940 fireside chat, voice only; sparks;
+  "Run This Town" or Kanye's "Champion").
 - 16 Nov pitch (sent late: Saturday's task only reached the session on Monday with Monday's). He picked
   "Someday Is Today" (the Gipper, done properly, to Dropkick Murphys' "I'm Shipping Up to Boston") and said
   of the other two, "Be Not Afraid" (John Paul II in Denver, 1993; Sabaton's "The Last Stand"; doors opening)

@@ -339,23 +339,23 @@ STREETS = layout([
     S(D - 0.75, 'holy_door_shut', **{'in': 3.2}),                                # the stop: the door, shut
 ], D)
 
-# ---- D-BR: THE DROP. Chorus 1; the band's own singers. The doors thrown open.
+# ---- D-BR: THE DROP. Chorus 1; the band's own singers. Every door thrown open.
 DOORS = layout([
     S(D, 'holy_door_open', fx=dict(punch=0.18, bloom=0.3)),                      # the Holy Door swings open
-    S(D + 2, 'loggia_open', alt=[('wyd', 0.0)]),                                 # the loggia opens on the first American pope
-    S(D + 4, 'church_open', alt=[('swiss_guard_2', 0.0)]),
-    S(D + 6, 'mach_door_open', alt=[('hangar_open', 0.0)]),
-    S(D + 8, 'smoke_crowd', alt=[('wyd_2', 0.0)]),
-    S(D + 10, 'bay_open', alt=[('holy_door_through', 0.0)]),
-    S(D + 12, 'wyd'),                                                            # Americans at World Youth Day under the flag
-    S(D + 14, 'ramp_open', alt=[('swiss_guard_2', 1.5)]),
-    S(D + 16, 'procession', alt=[('wyd_2', 1.5)]),
-    S(D + 18, 'swiss_guard_2'),                                                  # the Guard marches down the steps
-    S(D + 20, 'chicago_cheer', alt=[('jp2_denver_2', 1.0)]),
-    S(D + 22, 'holy_door_through'),                                              # through the open door
-    S(D + 24, 'leo_crowd', alt=[('wyd', 2.0)]),
-    S(D + 26, 'home_door', alt=[('hangar_open', 2.0)]),
-    S(D + 28, 'wyd_2', **{'in': 2.0}),
+    S(D + 2, 'loggia_open_2', **{'in': 0.3}),                                    # the cross carried out through the loggia's curtains
+    S(D + 4, 'bay_open_2'),                                                      # an ambulance rolls out of the bay into the sun
+    S(D + 6, 'smoke_crowd_2'),                                                   # young people screaming in St Peter's Square
+    S(D + 8, 'wyd'),                                                             # Americans at World Youth Day under the flag
+    S(D + 10, 'holy_door_through'),                                              # through the open door
+    S(D + 12, 'swiss_guard_2'),                                                  # the Guard marches down the steps
+    S(D + 14, 'mach_door_open'),                                                 # Mach: the hangar's light opens up
+    S(D + 15.9, 'chicago_cheer'),                                                # Chicago schoolchildren outside Holy Name Cathedral
+    S(D + 18, 'jp2_denver_2'),                                                   # 1993: Denver
+    S(D + 20, 'smoke_crowd_3'),                                                  # the square erupts, flags up
+    S(D + 22, 'wyd_2'),                                                          # a vast young crowd, the banner swinging
+    S(D + 24, 'bay_open'),                                                       # a firehouse, every light on
+    S(D + 26, 'hangar_open'),                                                    # the rocket in the open door at dusk
+    S(D + 28, 'smoke_crowd_4'),                                                  # a girl on someone's shoulders over a sea of phones
     S(D + 30, 'rooftop'),                                                        # St Peter's from above, the city beyond
 ], BR)
 
@@ -363,34 +363,48 @@ DOORS = layout([
 GOES = layout([
     L(BR + 1 - 0.2, 'Q1', crop=JP93),                                            # "The Church asks you to go,"
     S(W('Q1', 3.40), 'jp2_denver_2', **{'in': 1.0}),
-    S(104.5 - 0.2, 'wyd_2'),                                                     # "for all the young people of the world,"
+    S(104.5 - 0.2, 'wyd_2', **{'in': 1.0}),                                      # "for all the young people of the world,"
     S(108.0, 'ordination', **{'in': 2.4}),
     S(110.5 - 0.2, 'swiss_guard', **{'in': 1.2}),                                # "this generation,"
-    S(113.0, 'wyd', **{'in': 1.0}),
-    S(W('Q7', 23.75) - 0.2, 'jp2_denver', **{'in': 1.2}),                        # "the future generation."
+    S(113.0, 'smoke_crowd'),                                                     # white smoke
+    S(W('Q7', 23.75) - 0.2, 'chicago_cheer', **{'in': 0.3}),                     # "the future generation."  (schoolchildren, Chicago)
 ], K)
 GOES.insert(0, C('holy_door_above', round(BR + 1 - 0.2 - BR, 3), **{'in': 2.0}))   # BR: a beat of the threshold
 
-# ---- K-END_AT: THE KEY CHANGE to the record's dead stop. Everything at once.
+# ---- K-END_AT: THE KEY CHANGE to the record's dead stop. The first American pope walks out onto the loggia.
 FINAL = layout([
-    S(K, 'loggia_open_2', alt=[('holy_door_open', 0.4)], fx=dict(punch=0.2, bloom=0.35)),
-    S(K + 2, 'smoke_crowd_2', alt=[('wyd', 0.5)]),
-    S(K + 4, 'swiss_guard_2', **{'in': 0.8}),
-    S(K + 6, 'procession_2', alt=[('wyd_2', 0.6)]),
-    S(K + 8, 'mach_door_open', alt=[('hangar_open', 1.0)]),
-    S(K + 10, 'ordination', **{'in': 0.4}),
-    S(K + 12, 'church_open', alt=[('holy_door_through', 1.2)]),
-    S(K + 14, 'wyd', **{'in': 2.6}),
-    S(K + 16, 'bay_open', alt=[('swiss_guard', 2.0)]),
-    S(K + 18, 'jp2_denver_2', **{'in': 0.4}),
-    S(K + 20, 'rooftop', **{'in': 1.5}),
-    S(K + 22, 'holy_door_open', **{'in': 0.2}),
-    S(K + 24, 'wyd_2', **{'in': 0.2}),
-    S(K + 26, 'swiss_guard_2', **{'in': 2.2}),
-    S(K + 28, 'leo_crowd', alt=[('jp2_denver', 2.4)]),
-    S(K + 30, 'loggia_open', alt=[('holy_door_through', 2.0)], **{'in': 1.0}),
-    S(K + 34, 'wyd', **{'in': 1.6}),
-    S(K + 36, 'holy_door_open', **{'in': 1.6}),
+    S(K, 'loggia_open_3', fx=dict(punch=0.2, bloom=0.3), **{'in': 2.4}),         # behind Pope Leo XIV: the square, his hand goes up
+    S(K + 3, 'smoke_crowd_4', **{'in': 0.6}),
+    S(K + 5, 'holy_door_open', **{'in': 0.2}),
+    S(K + 7, 'swiss_guard_2', **{'in': 1.0}),
+    S(K + 9, 'loggia_open', **{'in': 2.6}),                                      # he comes to the rail
+    S(K + 11, 'wyd', **{'in': 1.8}),
+    S(K + 13, 'bay_open_2', **{'in': 0.6}),
+    S(K + 14.5, 'smoke_crowd_2', **{'in': 1.5}),
+    S(K + 16, 'jp2_young'),                                                      # 1978: his arm raised over the same square
+    S(K + 18, 'wyd_2', **{'in': 2.0}),
+    S(K + 20, 'chicago_cheer', **{'in': 1.2}),
+    S(K + 22, 'holy_door_through', **{'in': 1.0}),
+    S(K + 24, 'smoke_crowd_3', **{'in': 2.0}),
+    S(K + 26, 'jp2_denver', **{'in': 2.0}),
+], K + 28)
+
+
+def flips(*keys):
+    out = []
+    for k in keys:
+        k = (k,) if isinstance(k, str) else k
+        it = C(k[0], 0.5, **({'in': k[1]} if len(k) > 1 else {}))
+        it['fx'] = dict(it.get('fx', {}), punch=0.08, chroma=8)
+        out.append(it)
+    return out
+
+
+FLIP = flips(('holy_door_shut', 0.5), ('holy_door_open', 2.4), ('loggia_open_2', 1.2), ('bay_open_2', 1.2),
+             ('mach_door_open', 0.6), ('smoke_crowd_2', 2.4), ('wyd', 0.6), ('swiss_guard_2', 2.6),
+             ('jp2_denver_2', 2.6), ('smoke_crowd_4', 2.0), ('loggia_open', 3.3), ('chicago_cheer', 2.2))
+LAST = layout([
+    S(K + 28 + 6.0, 'loggia_open_3', **{'in': 3.0}),                             # the wave, to the dead stop
 ], END_AT)
 
 END_TEXT = os.environ.get('BN_TEXT', 'Open the doors.')
@@ -400,7 +414,7 @@ END = [                                       # silence: the door, shut; the lin
       text=[(1.0, END_TEXT, 58, 0.5, 'serif')], **{'in': 1.6}),
 ]
 
-SEQ = OPEN + STREETS + DOORS + GOES + FINAL + END
+SEQ = OPEN + STREETS + DOORS + GOES + FINAL + FLIP + LAST + END
 
 if __name__ == '__main__':
     import sys
@@ -408,7 +422,7 @@ if __name__ == '__main__':
         print('bed: %.2f s' % make_bed())
     b = 0.0
     marks = {id(OPEN[0]): '1978', id(STREETS[0]): 'RIFF 1993', id(DOORS[0]): 'DROP', id(GOES[0]): 'BRIDGE + LEAD-IN',
-             id(FINAL[0]): 'KEY CHANGE', id(END[0]): 'END'}
+             id(FINAL[0]): 'KEY CHANGE', id(FLIP[0]): 'FLIPS', id(LAST[0]): 'LAST', id(END[0]): 'END'}
     for s in SEQ:
         if id(s) in marks:
             print('%6.1f  %s' % (b, marks[id(s)]))

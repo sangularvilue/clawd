@@ -1,0 +1,10 @@
+{"ac":[
+{"hex":"400a0e","type":"adsb_icao","flight":"BAW117  ","r":"G-XWBA","t":"A35K","desc":"AIRBUS A-350-1000","alt_baro":3025,"alt_geom":3150,"gs":182.4,"track":222.1,"baro_rate":-768,"squawk":"2215","category":"A5","lat":40.680000,"lon":-73.760000,"nic":8,"rc":186,"seen_pos":0.3,"messages":51200,"seen":0.1,"rssi":-12.5},
+{"hex":"a4c2f1","type":"adsb_icao","flight":"DAL1234 ","r":"N301DN","t":"A321","alt_baro":11000,"gs":290,"track":205.5,"baro_rate":2304,"lat":40.750000,"lon":-73.900000,"seen":0.4},
+{"hex":"a0b1c2","type":"adsb_icao","flight":"N172SP  ","r":"N172SP","t":"C172","alt_baro":1500,"gs":95.2,"track":90,"baro_rate":0,"lat":40.720000,"lon":-73.850000},
+{"hex":"a8f00d","type":"adsb_icao","flight":"UAL2002 ","r":"N12004","t":"B789","alt_baro":38975,"gs":481.9,"track":75.2,"geom_rate":64,"lat":40.700000,"lon":-73.790000},
+{"hex":"a67e41","type":"adsb_icao","flight":"JBU1    ","r":"N623JB","t":"A320","alt_baro":"ground","gs":12.1,"track":310,"lat":40.641300,"lon":-73.778100},
+{"hex":"a11111","type":"adsb_icao","flight":"AAL100  ","r":"N101NN","t":"B77W","alt_baro":35000,"gs":510,"track":60,"lat":40.000000,"lon":-74.500000},
+{"hex":"a22222","type":"mode_s","alt_baro":24000,"gs":400,"seen":2.1},
+{"hex":"~a1b2c3","type":"tisb_other","alt_geom":800,"gs":70,"lat":40.710000,"lon":-73.840000}
+],"msg":"No error","now":1764000000000,"total":8,"ctime":1764000000012,"ptime":3}
